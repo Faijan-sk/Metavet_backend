@@ -527,7 +527,7 @@ public class GroomerKyc extends BaseEntity {
 	    ServiceOffered(String label) {
 	        this.label = label;
 	    }
-
+//ss
 	    public String getLabel() {
 	        return label;
 	    }
