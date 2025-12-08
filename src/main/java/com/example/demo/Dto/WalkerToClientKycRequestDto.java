@@ -5,87 +5,151 @@ import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.FutureOrPresent;
 
 public class WalkerToClientKycRequestDto {
 
     // ==================== Status Field ====================
     
-    private String status; // "PENDING", "APPROVED", "REJECTED" - Optional
+    @Pattern(
+        regexp = "^(PENDING|APPROVED|REJECTED)$",
+        message = "Status must be one of: 'PENDING', 'APPROVED', 'REJECTED'"
+    )
+    private String status;
 
     // ==================== Pet & Routine Overview ====================
     
-    private String petUid; // UUID string from frontend
+    @Pattern(
+        regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        message = "Pet UID must be a valid UUID format"
+    )
+    @Size(max = 100, message = "Pet UID must not exceed 100 characters")
+    private String petUid;
     
+    @Size(max = 500, message = "Pet names must not exceed 500 characters")
     private String petNames;
     
+    @Size(max = 200, message = "Breed type must not exceed 200 characters")
     private String breedType;
     
+    @Min(value = 0, message = "Age must be a positive number")
     private Integer age;
     
+    @Size(max = 100, message = "Pet species must not exceed 100 characters")
     private String petSpecies;
     
-    private String energyLevel; // "Low", "Medium", "High"
+    @Pattern(
+        regexp = "^(Low|Medium|High|LOW|MEDIUM|HIGH)$",
+        message = "Energy level must be one of: 'Low', 'Medium', 'High'"
+    )
+    private String energyLevel;
     
-    private String walkingExperience; // "Beginner", "Intermediate", "Well-trained", "Reactive"
+    @Pattern(
+        regexp = "^(Beginner|Intermediate|Well-trained|Reactive|BEGINNER|INTERMEDIATE|WELL_TRAINED|REACTIVE)$",
+        message = "Walking experience must be one of: 'Beginner', 'Intermediate', 'Well-trained', 'Reactive'"
+    )
+    private String walkingExperience;
     
-    private String preferredWalkType; // "Solo", "Group", "Either"
+    @Pattern(
+        regexp = "^(Solo|Group|Either|SOLO|GROUP|EITHER)$",
+        message = "Preferred walk type must be one of: 'Solo', 'Group', 'Either'"
+    )
+    private String preferredWalkType;
     
-    private String preferredWalkDuration; // "15", "30", "60", "Custom"
+    @Pattern(
+        regexp = "^(15|30|60|Custom)$",
+        message = "Preferred walk duration must be one of: '15', '30', '60', 'Custom'"
+    )
+    private String preferredWalkDuration;
     
+    @Min(value = 1, message = "Custom walk duration must be at least 1 minute")
     private Integer customWalkDuration;
     
-    private String frequency; // "Daily", "Weekly", "As needed", "Other"
+    @Pattern(
+        regexp = "^(Daily|Weekly|As needed|Other)$",
+        message = "Frequency must be one of: 'Daily', 'Weekly', 'As needed', 'Other'"
+    )
+    private String frequency;
     
+    @Size(max = 200, message = "Frequency other must not exceed 200 characters")
     private String frequencyOther;
     
-    private String preferredTimeOfDay; // "Morning", "Midday", "Evening", "Flexible"
+    @Pattern(
+        regexp = "^(Morning|Midday|Evening|Flexible)$",
+        message = "Preferred time of day must be one of: 'Morning', 'Midday', 'Evening', 'Flexible'"
+    )
+    private String preferredTimeOfDay;
     
+    @FutureOrPresent(message = "Preferred start date cannot be in the past")
     private LocalDate preferredStartDate;
 
     // ==================== Behavior & Handling ====================
     
-    private List<String> leashBehavior; // ["Pulls", "Walks nicely", etc.]
+    private List<String> leashBehavior;
     
+    @Size(max = 300, message = "Leash behavior other must not exceed 300 characters")
     private String leashBehaviorOther;
     
+    @Size(max = 1000, message = "Known triggers must not exceed 1000 characters")
     private String knownTriggers;
     
-    private String socialCompatibility; // "Friendly", "Solo only", "Unsure"
+    @Pattern(
+        regexp = "^(Friendly|Solo only|Unsure)$",
+        message = "Social compatibility must be one of: 'Friendly', 'Solo only', 'Unsure'"
+    )
+    private String socialCompatibility;
     
-    private List<String> handlingNotes; // ["Needs harness", "Wears muzzle", etc.]
+    private List<String> handlingNotes;
     
+    @Size(max = 300, message = "Handling notes other must not exceed 300 characters")
     private String handlingNotesOther;
     
+    @Size(max = 1000, message = "Comforting methods must not exceed 1000 characters")
     private String comfortingMethods;
 
     // ==================== Health & Safety ====================
     
     private Boolean medicalConditions;
     
+    @Size(max = 1000, message = "Medical conditions details must not exceed 1000 characters")
     private String medicalConditionsDetails;
     
     private Boolean medications;
     
+    @Size(max = 1000, message = "Medications details must not exceed 1000 characters")
     private String medicationsDetails;
     
+    @Size(max = 500, message = "Emergency vet info must not exceed 500 characters")
     private String emergencyVetInfo;
 
     // ==================== Access & Logistics ====================
     
-    private String startingLocation; // "Home", "Apartment", "Workplace", "Other"
+    @Pattern(
+        regexp = "^(Home|Apartment|Workplace|Other)$",
+        message = "Starting location must be one of: 'Home', 'Apartment', 'Workplace', 'Other'"
+    )
+    private String startingLocation;
     
+    @Size(max = 500, message = "Address/meeting point must not exceed 500 characters")
     private String addressMeetingPoint;
     
+    @Size(max = 1000, message = "Access instructions must not exceed 1000 characters")
     private String accessInstructions;
     
+    @Size(max = 200, message = "Backup contact must not exceed 200 characters")
     private String backupContact;
     
-    private List<String> postWalkPreferences; // ["Text update", "Photo update", etc.]
+    private List<String> postWalkPreferences;
 
     // ==================== Services & Add-ons ====================
     
-    private List<String> additionalServices; // ["Feeding", "Water", etc.]
+    private List<String> additionalServices;
     
+    @Size(max = 500, message = "Additional services other must not exceed 500 characters")
     private String additionalServicesOther;
 
     // ==================== Consent & Signature ====================
@@ -94,8 +158,11 @@ public class WalkerToClientKycRequestDto {
     private Boolean consent;
     
     @NotBlank(message = "Signature is required")
+    @Size(max = 200, message = "Signature must not exceed 200 characters")
     private String signature;
     
+    @NotNull(message = "Signature date is required")
+    @PastOrPresent(message = "Signature date cannot be in the future")
     private LocalDate signatureDate;
 
     // ==================== Getters & Setters ====================

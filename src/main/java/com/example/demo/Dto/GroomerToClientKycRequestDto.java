@@ -4,40 +4,52 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import com.example.demo.Entities.GroomerToClientKycEntity.HealthCondition;
+import com.example.demo.Entities.GroomerToClientKycEntity.BehaviorIssue;
+import com.example.demo.Entities.GroomerToClientKycEntity.Service;
+import com.example.demo.Entities.GroomerToClientKycEntity.AddOn;
 
 public class GroomerToClientKycRequestDto {
 
     // ==================== Pet Reference ====================
     
     @NotBlank(message = "Pet UID is required")
-    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", 
-             message = "Pet UID must be a valid UUID format")
+    @Pattern(
+        regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        message = "Pet UID must be a valid UUID format"
+    )
+    @Size(max = 100, message = "Pet UID must not exceed 100 characters")
     private String petUid;
 
     // ==================== Step 1: Grooming Preferences ====================
     
     @NotBlank(message = "Grooming frequency is required")
-    @Pattern(regexp = "^(Every 4 weeks|Every 6–8 weeks|Every 3 months|Other)$", 
-             message = "Grooming frequency must be one of: 'Every 4 weeks', 'Every 6–8 weeks', 'Every 3 months', 'Other'")
+    @Size(max = 100, message = "Grooming frequency must not exceed 100 characters")
     private String groomingFrequency;
     
+    @PastOrPresent(message = "Last grooming date cannot be in the future")
     private LocalDate lastGroomingDate;
     
     @Size(max = 500, message = "Preferred style cannot exceed 500 characters")
     private String preferredStyle;
     
-    @Size(max = 500, message = "Avoid focus areas cannot exceed 500 characters")
+    @Size(max = 1000, message = "Avoid focus areas cannot exceed 1000 characters")
     private String avoidFocusAreas;
 
     // ==================== Step 2: Health & Safety ====================
     
-    private List<@Pattern(regexp = "^(Skin issues|Ear infections|Allergies|Arthritis|Heart condition|None|Other)$",
-                          message = "Invalid health condition. Allowed values: 'Skin issues', 'Ear infections', 'Allergies', 'Arthritis', 'Heart condition', 'None', 'Other'") 
-                 String> healthConditions;
+    // REMOVED @Pattern - enums don't need pattern validation
+    @NotNull(message = "Health conditions are required")
+    @NotEmpty(message = "At least one health condition must be selected")
+    private List<HealthCondition> healthConditions;
     
     @Size(max = 300, message = "Other health condition cannot exceed 300 characters")
     private String otherHealthCondition;
@@ -45,51 +57,58 @@ public class GroomerToClientKycRequestDto {
     @NotNull(message = "Medication status is required (true/false)")
     private Boolean onMedication;
     
-    @Size(max = 500, message = "Medication details cannot exceed 500 characters")
+    @Size(max = 1000, message = "Medication details cannot exceed 1000 characters")
     private String medicationDetails;
     
     @NotNull(message = "Injury/surgery history is required (true/false)")
     private Boolean hadInjuriesSurgery;
     
-    @Size(max = 500, message = "Injury/surgery details cannot exceed 500 characters")
+    @Size(max = 1000, message = "Injury/surgery details cannot exceed 1000 characters")
     private String injurySurgeryDetails;
 
     // ==================== Step 3: Behavior & Handling ====================
     
-    private List<@Pattern(regexp = "^(Nervousness/anxiety|Fear of loud tools|Aggression|Biting|Excessive movement|None|Other)$",
-                          message = "Invalid behavior issue. Allowed values: 'Nervousness/anxiety', 'Fear of loud tools', 'Aggression', 'Biting', 'Excessive movement', 'None', 'Other'")
-                 String> behaviorIssues;
+    // REMOVED @Pattern - enums don't need pattern validation
+    @NotNull(message = "Behavior issues are required")
+    @NotEmpty(message = "At least one behavior issue must be selected")
+    private List<BehaviorIssue> behaviorIssues;
     
-    @Size(max = 500, message = "Calming methods cannot exceed 500 characters")
+    @Size(max = 1000, message = "Calming methods cannot exceed 1000 characters")
     private String calmingMethods;
     
-    @Size(max = 500, message = "Triggers cannot exceed 500 characters")
+    @Size(max = 1000, message = "Triggers cannot exceed 1000 characters")
     private String triggers;
 
     // ==================== Step 4: Services & Scheduling ====================
     
-    private List<@Pattern(regexp = "^(Full groom \\(bath \\+ cut\\)|Bath only|Nail trim|Ear cleaning|Teeth cleaning|De-shedding treatment|Other)$",
-                          message = "Invalid service. Allowed values: 'Full groom (bath + cut)', 'Bath only', 'Nail trim', 'Ear cleaning', 'Teeth cleaning', 'De-shedding treatment', 'Other'")
-                 String> services;
+    // REMOVED @Pattern - enums don't need pattern validation
+    @NotNull(message = "Services are required")
+    @NotEmpty(message = "At least one service must be selected")
+    private List<Service> services;
     
     @Size(max = 300, message = "Other service cannot exceed 300 characters")
     private String otherService;
     
     @NotBlank(message = "Grooming location preference is required")
-    @Pattern(regexp = "^(Mobile/in-home grooming|Grooming salon|Veterinary clinic)$",
-             message = "Grooming location must be one of: 'Mobile/in-home grooming', 'Grooming salon', 'Veterinary clinic'")
+    @Pattern(
+        regexp = "^(Mobile/in-home grooming|Grooming salon|Either is Fine)$",
+        message = "Grooming location must be one of: 'Mobile/in-home grooming', 'Grooming salon', 'Either is Fine'"
+    )
+    @Size(max = 100, message = "Grooming location must not exceed 100 characters")
     private String groomingLocation;
     
+    @NotNull(message = "Appointment date is required")
+    @FutureOrPresent(message = "Appointment date cannot be in the past")
     private LocalDate appointmentDate;
     
+    @NotNull(message = "Appointment time is required")
     private LocalTime appointmentTime;
     
-    @Size(max = 1000, message = "Additional notes cannot exceed 1000 characters")
+    @Size(max = 2000, message = "Additional notes cannot exceed 2000 characters")
     private String additionalNotes;
     
-    private List<@Pattern(regexp = "^(Scented finish|De-matting|Flea/tick treatment|Paw balm|Bow/bandana)$",
-                          message = "Invalid add-on. Allowed values: 'Scented finish', 'De-matting', 'Flea/tick treatment', 'Paw balm', 'Bow/bandana'")
-                 String> addOns;
+    // REMOVED @Pattern - enums don't need pattern validation
+    private List<AddOn> addOns;
 
     // ==================== Getters & Setters ====================
 
@@ -133,11 +152,11 @@ public class GroomerToClientKycRequestDto {
         this.avoidFocusAreas = avoidFocusAreas;
     }
 
-    public List<String> getHealthConditions() {
+    public List<HealthCondition> getHealthConditions() {
         return healthConditions;
     }
 
-    public void setHealthConditions(List<String> healthConditions) {
+    public void setHealthConditions(List<HealthCondition> healthConditions) {
         this.healthConditions = healthConditions;
     }
 
@@ -181,11 +200,11 @@ public class GroomerToClientKycRequestDto {
         this.injurySurgeryDetails = injurySurgeryDetails;
     }
 
-    public List<String> getBehaviorIssues() {
+    public List<BehaviorIssue> getBehaviorIssues() {
         return behaviorIssues;
     }
 
-    public void setBehaviorIssues(List<String> behaviorIssues) {
+    public void setBehaviorIssues(List<BehaviorIssue> behaviorIssues) {
         this.behaviorIssues = behaviorIssues;
     }
 
@@ -205,11 +224,11 @@ public class GroomerToClientKycRequestDto {
         this.triggers = triggers;
     }
 
-    public List<String> getServices() {
+    public List<Service> getServices() {
         return services;
     }
 
-    public void setServices(List<String> services) {
+    public void setServices(List<Service> services) {
         this.services = services;
     }
 
@@ -253,11 +272,11 @@ public class GroomerToClientKycRequestDto {
         this.additionalNotes = additionalNotes;
     }
 
-    public List<String> getAddOns() {
+    public List<AddOn> getAddOns() {
         return addOns;
     }
 
-    public void setAddOns(List<String> addOns) {
+    public void setAddOns(List<AddOn> addOns) {
         this.addOns = addOns;
     }
 }

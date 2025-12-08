@@ -13,6 +13,10 @@ import org.springframework.stereotype.Repository;
 
 import com.example.demo.Entities.GroomerToClientKycEntity;
 import com.example.demo.Entities.GroomerToClientKycEntity.KycStatus;
+import com.example.demo.Entities.GroomerToClientKycEntity.HealthCondition;
+import com.example.demo.Entities.GroomerToClientKycEntity.BehaviorIssue;
+import com.example.demo.Entities.GroomerToClientKycEntity.Service;
+import com.example.demo.Entities.GroomerToClientKycEntity.AddOn;
 import com.example.demo.Entities.PetsEntity;
 
 @Repository
@@ -68,21 +72,23 @@ public interface GroomerToClientKycRepo extends JpaRepository<GroomerToClientKyc
     @Query("SELECT g FROM GroomerToClientKycEntity g WHERE g.hadInjuriesSurgery = true")
     List<GroomerToClientKycEntity> findKycsWithInjurySurgery();
 
-    // Search by health conditions (comma-separated field)
-    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE LOWER(g.healthConditions) LIKE LOWER(CONCAT('%', :condition, '%'))")
-    List<GroomerToClientKycEntity> searchByHealthCondition(@Param("condition") String condition);
+    // ---------- UPDATED: enum based searches for List fields ----------
 
-    // Search by behavior issues (comma-separated field)
-    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE LOWER(g.behaviorIssues) LIKE LOWER(CONCAT('%', :behavior, '%'))")
-    List<GroomerToClientKycEntity> searchByBehaviorIssue(@Param("behavior") String behavior);
+    // Search by health condition (now searches in List)
+    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE :condition MEMBER OF g.healthConditions")
+    List<GroomerToClientKycEntity> searchByHealthCondition(@Param("condition") HealthCondition condition);
 
-    // Search by services (comma-separated field)
-    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE LOWER(g.services) LIKE LOWER(CONCAT('%', :service, '%'))")
-    List<GroomerToClientKycEntity> searchByService(@Param("service") String service);
+    // Search by behavior issue (now searches in List)
+    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE :behavior MEMBER OF g.behaviorIssues")
+    List<GroomerToClientKycEntity> searchByBehaviorIssue(@Param("behavior") BehaviorIssue behavior);
 
-    // Search by add-ons (comma-separated field)
-    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE LOWER(g.addOns) LIKE LOWER(CONCAT('%', :addon, '%'))")
-    List<GroomerToClientKycEntity> searchByAddOn(@Param("addon") String addon);
+    // Search by service (now searches in List)
+    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE :service MEMBER OF g.services")
+    List<GroomerToClientKycEntity> searchByService(@Param("service") Service service);
+
+    // Search by add-on (searches in List)
+    @Query("SELECT g FROM GroomerToClientKycEntity g WHERE :addon MEMBER OF g.addOns")
+    List<GroomerToClientKycEntity> searchByAddOn(@Param("addon") AddOn addon);
 
     // Find recent submissions
     @Query("SELECT g FROM GroomerToClientKycEntity g ORDER BY g.createdAt DESC")
@@ -92,7 +98,7 @@ public interface GroomerToClientKycRepo extends JpaRepository<GroomerToClientKyc
     @Query("SELECT g FROM GroomerToClientKycEntity g WHERE g.appointmentDate >= :today ORDER BY g.appointmentDate ASC, g.appointmentTime ASC")
     List<GroomerToClientKycEntity> findUpcomingAppointments(@Param("today") LocalDate today);
 
-    // ---------- NEW: Status Related Queries ----------
+    // ---------- Status Related Queries ----------
     
     // Find by status
     List<GroomerToClientKycEntity> findByStatus(KycStatus status);

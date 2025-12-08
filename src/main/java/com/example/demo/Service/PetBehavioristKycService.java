@@ -1,8 +1,10 @@
 package com.example.demo.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,6 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.demo.Dto.PetBehavioristKycRequestDto;
 import com.example.demo.Entities.PetsEntity;
 import com.example.demo.Entities.PetBehavioristKycEntity;
+import com.example.demo.Entities.PetBehavioristKycEntity.BehavioralChallenges;
+import com.example.demo.Entities.PetBehavioristKycEntity.AggressiveBehaviors;
+import com.example.demo.Entities.PetBehavioristKycEntity.CurrentTrainingTools;
 import com.example.demo.Entities.PetBehavioristKycEntity.KycStatus;
 import com.example.demo.Repository.PetRepo;
 import com.example.demo.Repository.PetBehavioristKycRepo;
@@ -26,384 +31,327 @@ public class PetBehavioristKycService {
     @Autowired
     private PetRepo petsRepo;
 
+    // =====================================================
+    // 01. CREATE KYC
+    // =====================================================
     @Transactional
     public PetBehavioristKycEntity createBehavioristKyc(PetBehavioristKycRequestDto dto) throws ValidationException {
 
-        PetBehavioristKycEntity kyc = new PetBehavioristKycEntity();
+        // ---------- Basic sanity validations (business rules) ----------
 
-        // ==================== Pet Mapping via UUID ====================
-        
-        if (dto.getPetUid() != null && !dto.getPetUid().trim().isEmpty()) {
-            try {
-                UUID petUuid = UUID.fromString(dto.getPetUid());
-                Optional<PetsEntity> petOpt = petsRepo.findByUid(petUuid);
-                
-                if (petOpt.isPresent()) {
-                    kyc.setPet(petOpt.get());
-                    kyc.setPetUid(dto.getPetUid());
-                } else {
-                    throw new ValidationException("Pet with UID " + dto.getPetUid() + " not found.");
-                }
-            } catch (IllegalArgumentException e) {
-                throw new ValidationException("Invalid pet UID format: " + dto.getPetUid());
-            }
+        // Consent must be true
+        if (dto.getConsentAccuracy() == null || !Boolean.TRUE.equals(dto.getConsentAccuracy())) {
+            throw new ValidationException("CONSENT_REQUIRED: You must confirm that the information is accurate.");
         }
 
-        // ==================== Step 1: Behavioral Concern Overview ====================
-        
-        // Validate behavioral challenges
+        // Pet UID parse + pet existence check
+        UUID petUid;
+        try {
+            petUid = UUID.fromString(dto.getPetUid());
+        } catch (IllegalArgumentException ex) {
+            throw new ValidationException("INVALID_PET_UID: Pet UID must be a valid UUID.");
+        }
+
+        PetsEntity pet = petsRepo.findByUid(petUid)
+                .orElseThrow(() -> new ValidationException("PET_NOT_FOUND: No pet found for the given petUid."));
+
+        // Behavioral challenges must not be empty (DTO already has @NotNull/@NotEmpty, but double check)
         if (dto.getBehavioralChallenges() == null || dto.getBehavioralChallenges().isEmpty()) {
-            throw new ValidationException("Please select at least one behavioral challenge.");
+            throw new ValidationException("BEHAVIORAL_CHALLENGES_REQUIRED: At least one behavioral challenge must be selected.");
         }
-        
-        // Convert List to comma-separated String
-        kyc.setBehavioralChallenges(String.join(",", dto.getBehavioralChallenges()));
-        
-        // Validate aggression description if "Aggression" is selected
-        if (dto.getBehavioralChallenges().contains("Aggression")) {
+
+        // ---------- Convert list<String> -> Enums (with validation) ----------
+        List<BehavioralChallenges> challengeEnums = convertBehavioralChallenges(dto.getBehavioralChallenges());
+        List<AggressiveBehaviors> aggressiveEnums = convertAggressiveBehaviors(dto.getAggressiveBehaviors());
+        List<CurrentTrainingTools> trainingToolEnums = convertCurrentTrainingTools(dto.getCurrentTrainingTools());
+
+        // ---------- Conditional validations based on selections ----------
+
+        // If AGGRESSION selected, aggressionBiteDescription must be provided
+        if (challengeEnums.contains(BehavioralChallenges.AGGRESSION)) {
             if (dto.getAggressionBiteDescription() == null || dto.getAggressionBiteDescription().trim().isEmpty()) {
-                throw new ValidationException("Please describe aggression incidents when 'Aggression' is selected.");
+                throw new ValidationException(
+                        "AGGRESSION_DESCRIPTION_REQUIRED: When 'Aggression' is selected, please describe any biting incidents or context.");
             }
-            kyc.setAggressionBiteDescription(dto.getAggressionBiteDescription());
         }
-        
-        // Validate other description if "Other" is selected
-        if (dto.getBehavioralChallenges().contains("Other")) {
+
+        // If OTHER selected in behavioralChallenges, otherBehaviorDescription must be provided
+        if (challengeEnums.contains(BehavioralChallenges.OTHER)) {
             if (dto.getOtherBehaviorDescription() == null || dto.getOtherBehaviorDescription().trim().isEmpty()) {
-                throw new ValidationException("Please describe other behavioral challenge when 'Other' is selected.");
-            }
-            kyc.setOtherBehaviorDescription(dto.getOtherBehaviorDescription());
-        }
-        
-        kyc.setBehaviorStartTime(dto.getBehaviorStartTime());
-        kyc.setBehaviorFrequency(dto.getBehaviorFrequency());
-        
-        // Validate specific situations if selected
-        if ("Only in specific situations".equalsIgnoreCase(dto.getBehaviorFrequency())) {
-            if (dto.getSpecificSituationsDescription() == null || dto.getSpecificSituationsDescription().trim().isEmpty()) {
-                throw new ValidationException("Please describe the specific situations when 'Only in specific situations' is selected.");
-            }
-            kyc.setSpecificSituationsDescription(dto.getSpecificSituationsDescription());
-        }
-
-        // ==================== Step 2: Triggers & Context ====================
-        
-        kyc.setKnownTriggers(dto.getKnownTriggers());
-        kyc.setBehaviorProgress(dto.getBehaviorProgress());
-        kyc.setBehaviorProgressContext(dto.getBehaviorProgressContext());
-        
-        // Convert aggressive behaviors List to comma-separated String
-        if (dto.getAggressiveBehaviors() != null && !dto.getAggressiveBehaviors().isEmpty()) {
-            kyc.setAggressiveBehaviors(String.join(",", dto.getAggressiveBehaviors()));
-        }
-        
-        kyc.setSeriousIncidents(dto.getSeriousIncidents());
-
-        // ==================== Step 3: Training & Tools History ====================
-        
-        kyc.setWorkedWithTrainer(dto.getWorkedWithTrainer());
-        
-        // Validate trainer approaches if worked with trainer
-        if (dto.getWorkedWithTrainer() != null && dto.getWorkedWithTrainer() == true) {
-            kyc.setTrainerApproaches(dto.getTrainerApproaches());
-        }
-        
-        // Convert training tools List to comma-separated String
-        if (dto.getCurrentTrainingTools() != null && !dto.getCurrentTrainingTools().isEmpty()) {
-            kyc.setCurrentTrainingTools(String.join(",", dto.getCurrentTrainingTools()));
-            
-            // Validate other training tool if "Other" is selected
-            if (dto.getCurrentTrainingTools().contains("Other")) {
-                if (dto.getOtherTrainingTool() == null || dto.getOtherTrainingTool().trim().isEmpty()) {
-                    throw new ValidationException("Please specify other training tool when 'Other' is selected.");
-                }
-                kyc.setOtherTrainingTool(dto.getOtherTrainingTool());
+                throw new ValidationException(
+                        "OTHER_BEHAVIOR_DESCRIPTION_REQUIRED: When 'Other' is selected, 'otherBehaviorDescription' is required.");
             }
         }
-        
-        kyc.setPetMotivation(dto.getPetMotivation());
-        
-        // Validate favorite rewards if pet is motivated
-        if ("Yes".equalsIgnoreCase(dto.getPetMotivation())) {
-            kyc.setFavoriteRewards(dto.getFavoriteRewards());
+
+        // If behaviorFrequency = "Only in specific situations", specificSituationsDescription is required
+        if (dto.getBehaviorFrequency() != null &&
+                dto.getBehaviorFrequency().equalsIgnoreCase("Only in specific situations")) {
+
+            if (dto.getSpecificSituationsDescription() == null ||
+                    dto.getSpecificSituationsDescription().trim().isEmpty()) {
+
+                throw new ValidationException(
+                        "SPECIFIC_SITUATIONS_REQUIRED: Please describe the specific situations where the behavior occurs.");
+            }
         }
 
-        // ==================== Step 4: Routine & Environment ====================
-        
-        kyc.setWalksPerDay(dto.getWalksPerDay());
-        kyc.setOffLeashTime(dto.getOffLeashTime());
-        kyc.setTimeAlone(dto.getTimeAlone());
-        kyc.setExerciseStimulation(dto.getExerciseStimulation());
-        
-        kyc.setOtherPets(dto.getOtherPets());
-        
-        // Validate other pets details if other pets exist
-        if (dto.getOtherPets() != null && dto.getOtherPets() == true) {
-            kyc.setOtherPetsDetails(dto.getOtherPetsDetails());
+        // If workedWithTrainer = true -> trainerApproaches required
+        if (Boolean.TRUE.equals(dto.getWorkedWithTrainer())) {
+            if (dto.getTrainerApproaches() == null || dto.getTrainerApproaches().trim().isEmpty()) {
+                throw new ValidationException(
+                        "TRAINER_APPROACHES_REQUIRED: Since you have worked with a trainer, please describe what approaches were used.");
+            }
         }
-        
-        kyc.setChildrenInHome(dto.getChildrenInHome());
-        
-        // Validate children details if children are in home
-        if (dto.getChildrenInHome() != null && dto.getChildrenInHome() == true) {
-            kyc.setChildrenAges(dto.getChildrenAges());
-            kyc.setPetResponseWithChildren(dto.getPetResponseWithChildren());
+
+        // If training tools include OTHER, otherTrainingTool is required
+        if (trainingToolEnums.contains(CurrentTrainingTools.OTHER)) {
+            if (dto.getOtherTrainingTool() == null || dto.getOtherTrainingTool().trim().isEmpty()) {
+                throw new ValidationException(
+                        "OTHER_TRAINING_TOOL_REQUIRED: When 'Other' training tool is selected, 'otherTrainingTool' description is required.");
+            }
         }
-        
-        kyc.setHomeEnvironment(dto.getHomeEnvironment());
-        
-        // Validate home environment other if "Other" is selected
-        if ("Other".equalsIgnoreCase(dto.getHomeEnvironment())) {
+
+        // If petMotivation = Yes -> favoriteRewards required
+        if (dto.getPetMotivation() != null && dto.getPetMotivation().equalsIgnoreCase("Yes")) {
+            if (dto.getFavoriteRewards() == null || dto.getFavoriteRewards().trim().isEmpty()) {
+                throw new ValidationException(
+                        "FAVORITE_REWARDS_REQUIRED: Please specify your pet's favorite rewards when they are food/toy motivated.");
+            }
+        }
+
+        // If otherPets = true -> otherPetsDetails required
+        if (Boolean.TRUE.equals(dto.getOtherPets())) {
+            if (dto.getOtherPetsDetails() == null || dto.getOtherPetsDetails().trim().isEmpty()) {
+                throw new ValidationException(
+                        "OTHER_PETS_DETAILS_REQUIRED: When 'otherPets' is true, 'otherPetsDetails' is required (types, ages, how they get along).");
+            }
+        }
+
+        // If childrenInHome = true -> childrenAges & petResponseWithChildren required
+        if (Boolean.TRUE.equals(dto.getChildrenInHome())) {
+            if (dto.getChildrenAges() == null || dto.getChildrenAges().trim().isEmpty()) {
+                throw new ValidationException(
+                        "CHILDREN_AGES_REQUIRED: When 'childrenInHome' is true, 'childrenAges' is required.");
+            }
+            if (dto.getPetResponseWithChildren() == null || dto.getPetResponseWithChildren().trim().isEmpty()) {
+                throw new ValidationException(
+                        "PET_RESPONSE_WITH_CHILDREN_REQUIRED: Please describe how your pet responds around children.");
+            }
+        }
+
+        // If homeEnvironment = Other -> homeEnvironmentOther required
+        if (dto.getHomeEnvironment() != null && dto.getHomeEnvironment().equalsIgnoreCase("Other")) {
             if (dto.getHomeEnvironmentOther() == null || dto.getHomeEnvironmentOther().trim().isEmpty()) {
-                throw new ValidationException("Please describe home environment when 'Other' is selected.");
+                throw new ValidationException(
+                        "HOME_ENVIRONMENT_OTHER_REQUIRED: When 'Other' is selected for home environment, please describe it.");
             }
-            kyc.setHomeEnvironmentOther(dto.getHomeEnvironmentOther());
         }
 
-        // ==================== Step 5: Goals & Expectations ====================
-        
-        kyc.setSuccessOutcome(dto.getSuccessOutcome());
-        kyc.setOpenToAdjustments(dto.getOpenToAdjustments());
-        kyc.setPreferredSessionType(dto.getPreferredSessionType());
-        kyc.setAdditionalNotes(dto.getAdditionalNotes());
+        // ---------- Map DTO -> Entity ----------
 
-        // ==================== Consent ====================
-        
-        if (dto.getConsentAccuracy() == null || dto.getConsentAccuracy() != true) {
-            throw new ValidationException("Consent is required to proceed.");
-        }
-        kyc.setConsentAccuracy(dto.getConsentAccuracy());
+        PetBehavioristKycEntity entity = new PetBehavioristKycEntity();
 
-        // Save and return
-        return behavioristKycRepo.save(kyc);
+        entity.setPet(pet);
+        entity.setPetUid(dto.getPetUid());
+
+        // Step 1
+        entity.setBehavioralChallengesEnums(challengeEnums); // will set comma-separated string internally
+        entity.setAggressionBiteDescription(dto.getAggressionBiteDescription());
+        entity.setOtherBehaviorDescription(dto.getOtherBehaviorDescription());
+        entity.setBehaviorStartTime(dto.getBehaviorStartTime());
+        entity.setBehaviorFrequency(dto.getBehaviorFrequency());
+        entity.setSpecificSituationsDescription(dto.getSpecificSituationsDescription());
+
+        // Step 2
+        entity.setKnownTriggers(dto.getKnownTriggers());
+        entity.setBehaviorProgress(dto.getBehaviorProgress());
+        entity.setBehaviorProgressContext(dto.getBehaviorProgressContext());
+        entity.setAggressiveBehaviorsEnums(aggressiveEnums);
+        entity.setSeriousIncidents(dto.getSeriousIncidents());
+
+        // Step 3
+        entity.setWorkedWithTrainer(dto.getWorkedWithTrainer());
+        entity.setTrainerApproaches(dto.getTrainerApproaches());
+        entity.setCurrentTrainingToolsEnums(trainingToolEnums);
+        entity.setOtherTrainingTool(dto.getOtherTrainingTool());
+        entity.setPetMotivation(dto.getPetMotivation());
+        entity.setFavoriteRewards(dto.getFavoriteRewards());
+
+        // Step 4
+        entity.setWalksPerDay(dto.getWalksPerDay());
+        entity.setOffLeashTime(dto.getOffLeashTime());
+        entity.setTimeAlone(dto.getTimeAlone());
+        entity.setExerciseStimulation(dto.getExerciseStimulation());
+        entity.setOtherPets(dto.getOtherPets());
+        entity.setOtherPetsDetails(dto.getOtherPetsDetails());
+        entity.setChildrenInHome(dto.getChildrenInHome());
+        entity.setChildrenAges(dto.getChildrenAges());
+        entity.setPetResponseWithChildren(dto.getPetResponseWithChildren());
+        entity.setHomeEnvironment(dto.getHomeEnvironment());
+        entity.setHomeEnvironmentOther(dto.getHomeEnvironmentOther());
+
+        // Step 5
+        entity.setSuccessOutcome(dto.getSuccessOutcome());
+        entity.setOpenToAdjustments(dto.getOpenToAdjustments());
+        entity.setPreferredSessionType(dto.getPreferredSessionType());
+        entity.setAdditionalNotes(dto.getAdditionalNotes());
+
+        // Consent & initial status
+        entity.setConsentAccuracy(dto.getConsentAccuracy());
+        entity.setKycStatus(KycStatus.PENDING);
+
+        // ---------- Persist ----------
+        return behavioristKycRepo.save(entity);
     }
 
+    // =====================================================
+    // 02. DELETE BY UID
+    // =====================================================
     @Transactional
-    public PetBehavioristKycEntity updateBehavioristKyc(UUID uid, PetBehavioristKycRequestDto dto) throws ValidationException {
-        
-        Optional<PetBehavioristKycEntity> existingKycOpt = behavioristKycRepo.findByUid(uid);
-        
-        if (!existingKycOpt.isPresent()) {
-            throw new ValidationException("Behaviorist KYC with UID " + uid + " not found.");
+    public void deleteByUid(String uid) throws ValidationException {
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(uid);
+        } catch (IllegalArgumentException ex) {
+            throw new ValidationException("INVALID_UID: KYC UID must be a valid UUID.");
         }
 
-        PetBehavioristKycEntity kyc = existingKycOpt.get();
-
-        // ==================== Pet Mapping via UUID ====================
-        
-        if (dto.getPetUid() != null && !dto.getPetUid().trim().isEmpty()) {
-            try {
-                UUID petUuid = UUID.fromString(dto.getPetUid());
-                Optional<PetsEntity> petOpt = petsRepo.findByUid(petUuid);
-                
-                if (petOpt.isPresent()) {
-                    kyc.setPet(petOpt.get());
-                    kyc.setPetUid(dto.getPetUid());
-                } else {
-                    throw new ValidationException("Pet with UID " + dto.getPetUid() + " not found.");
-                }
-            } catch (IllegalArgumentException e) {
-                throw new ValidationException("Invalid pet UID format: " + dto.getPetUid());
-            }
+        Optional<PetBehavioristKycEntity> existing = behavioristKycRepo.findByUid(uuid);
+        if (existing.isEmpty()) {
+            throw new ValidationException("KYC_NOT_FOUND: No behaviorist KYC found for the given UID.");
         }
 
-        // ==================== Step 1: Behavioral Concern Overview ====================
-        
-        if (dto.getBehavioralChallenges() == null || dto.getBehavioralChallenges().isEmpty()) {
-            throw new ValidationException("Please select at least one behavioral challenge.");
-        }
-        
-        kyc.setBehavioralChallenges(String.join(",", dto.getBehavioralChallenges()));
-        
-        if (dto.getBehavioralChallenges().contains("Aggression")) {
-            if (dto.getAggressionBiteDescription() == null || dto.getAggressionBiteDescription().trim().isEmpty()) {
-                throw new ValidationException("Please describe aggression incidents when 'Aggression' is selected.");
-            }
-            kyc.setAggressionBiteDescription(dto.getAggressionBiteDescription());
-        }
-        
-        if (dto.getBehavioralChallenges().contains("Other")) {
-            if (dto.getOtherBehaviorDescription() == null || dto.getOtherBehaviorDescription().trim().isEmpty()) {
-                throw new ValidationException("Please describe other behavioral challenge when 'Other' is selected.");
-            }
-            kyc.setOtherBehaviorDescription(dto.getOtherBehaviorDescription());
-        }
-        
-        kyc.setBehaviorStartTime(dto.getBehaviorStartTime());
-        kyc.setBehaviorFrequency(dto.getBehaviorFrequency());
-        
-        if ("Only in specific situations".equalsIgnoreCase(dto.getBehaviorFrequency())) {
-            if (dto.getSpecificSituationsDescription() == null || dto.getSpecificSituationsDescription().trim().isEmpty()) {
-                throw new ValidationException("Please describe the specific situations.");
-            }
-            kyc.setSpecificSituationsDescription(dto.getSpecificSituationsDescription());
-        }
-
-        // ==================== Step 2: Triggers & Context ====================
-        
-        kyc.setKnownTriggers(dto.getKnownTriggers());
-        kyc.setBehaviorProgress(dto.getBehaviorProgress());
-        kyc.setBehaviorProgressContext(dto.getBehaviorProgressContext());
-        
-        if (dto.getAggressiveBehaviors() != null && !dto.getAggressiveBehaviors().isEmpty()) {
-            kyc.setAggressiveBehaviors(String.join(",", dto.getAggressiveBehaviors()));
-        }
-        
-        kyc.setSeriousIncidents(dto.getSeriousIncidents());
-
-        // ==================== Step 3: Training & Tools History ====================
-        
-        kyc.setWorkedWithTrainer(dto.getWorkedWithTrainer());
-        
-        if (dto.getWorkedWithTrainer() != null && dto.getWorkedWithTrainer() == true) {
-            kyc.setTrainerApproaches(dto.getTrainerApproaches());
-        }
-        
-        if (dto.getCurrentTrainingTools() != null && !dto.getCurrentTrainingTools().isEmpty()) {
-            kyc.setCurrentTrainingTools(String.join(",", dto.getCurrentTrainingTools()));
-            
-            if (dto.getCurrentTrainingTools().contains("Other")) {
-                if (dto.getOtherTrainingTool() == null || dto.getOtherTrainingTool().trim().isEmpty()) {
-                    throw new ValidationException("Please specify other training tool.");
-                }
-                kyc.setOtherTrainingTool(dto.getOtherTrainingTool());
-            }
-        }
-        
-        kyc.setPetMotivation(dto.getPetMotivation());
-        
-        if ("Yes".equalsIgnoreCase(dto.getPetMotivation())) {
-            kyc.setFavoriteRewards(dto.getFavoriteRewards());
-        }
-
-        // ==================== Step 4: Routine & Environment ====================
-        
-        kyc.setWalksPerDay(dto.getWalksPerDay());
-        kyc.setOffLeashTime(dto.getOffLeashTime());
-        kyc.setTimeAlone(dto.getTimeAlone());
-        kyc.setExerciseStimulation(dto.getExerciseStimulation());
-        
-        kyc.setOtherPets(dto.getOtherPets());
-        
-        if (dto.getOtherPets() != null && dto.getOtherPets() == true) {
-            kyc.setOtherPetsDetails(dto.getOtherPetsDetails());
-        }
-        
-        kyc.setChildrenInHome(dto.getChildrenInHome());
-        
-        if (dto.getChildrenInHome() != null && dto.getChildrenInHome() == true) {
-            kyc.setChildrenAges(dto.getChildrenAges());
-            kyc.setPetResponseWithChildren(dto.getPetResponseWithChildren());
-        }
-        
-        kyc.setHomeEnvironment(dto.getHomeEnvironment());
-        
-        if ("Other".equalsIgnoreCase(dto.getHomeEnvironment())) {
-            if (dto.getHomeEnvironmentOther() == null || dto.getHomeEnvironmentOther().trim().isEmpty()) {
-                throw new ValidationException("Please describe home environment.");
-            }
-            kyc.setHomeEnvironmentOther(dto.getHomeEnvironmentOther());
-        }
-
-        // ==================== Step 5: Goals & Expectations ====================
-        
-        kyc.setSuccessOutcome(dto.getSuccessOutcome());
-        kyc.setOpenToAdjustments(dto.getOpenToAdjustments());
-        kyc.setPreferredSessionType(dto.getPreferredSessionType());
-        kyc.setAdditionalNotes(dto.getAdditionalNotes());
-
-        // ==================== Consent ====================
-        
-        if (dto.getConsentAccuracy() == null || dto.getConsentAccuracy() != true) {
-            throw new ValidationException("Consent is required to proceed.");
-        }
-        kyc.setConsentAccuracy(dto.getConsentAccuracy());
-
-        return behavioristKycRepo.save(kyc);
+        behavioristKycRepo.deleteByUid(uuid);
     }
-    
+
+    // =====================================================
+    // 03. GET ALL
+    // =====================================================
+    @Transactional(readOnly = true)
+    public List<PetBehavioristKycEntity> getAllKycs() {
+        return behavioristKycRepo.findAll();
+    }
+
+    // =====================================================
+    // 04. GET BY UID
+    // =====================================================
+    @Transactional(readOnly = true)
+    public PetBehavioristKycEntity getByUid(String uid) throws ValidationException {
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(uid);
+        } catch (IllegalArgumentException ex) {
+            throw new ValidationException("INVALID_UID: KYC UID must be a valid UUID.");
+        }
+
+        return behavioristKycRepo.findByUid(uuid)
+                .orElseThrow(() -> new ValidationException("KYC_NOT_FOUND: No behaviorist KYC found for the given UID."));
+    }
+
+    // =====================================================
+    // 05. UPDATE STATUS BY UID
+    // =====================================================
     @Transactional
-    public PetBehavioristKycEntity updateKycStatus(UUID uid, String statusStr) throws ValidationException {
-    Optional<PetBehavioristKycEntity> existing = behavioristKycRepo.findByUid(uid);
-    if (!existing.isPresent()) {
-    throw new ValidationException("Behaviorist KYC with UID " + uid + " not found.");
-    }
-
-
-    PetBehavioristKycEntity kyc = existing.get();
-
-
-    if (statusStr == null) {
-    throw new ValidationException("Status value is required.");
-    }
-    
-
-
-    try {
-    KycStatus status = KycStatus.valueOf(statusStr.trim().toUpperCase());
-    kyc.setKycStatus(status);
-    return behavioristKycRepo.save(kyc);
-    } catch (IllegalArgumentException iae) {
-    throw new ValidationException("Invalid status. Allowed values: PENDING, APPROVED, REJECTED");
-    }
-    }
-    
-    
-
-    public Optional<PetBehavioristKycEntity> getBehavioristKycByUid(UUID uid) {
-        return behavioristKycRepo.findByUid(uid);
-    }
-
-    public List<PetBehavioristKycEntity> getAllBehavioristKycs() {
-        return behavioristKycRepo.findAllByOrderByCreatedAtDesc();
-    }
-
-    public Optional<PetBehavioristKycEntity> getBehavioristKycByPetId(Long petId) {
-        return behavioristKycRepo.findByPetId(petId).stream().findFirst();
-    }
-    
-    public Optional<PetBehavioristKycEntity> getBehavioristKycByPetUid(String petUid) {
-        return behavioristKycRepo.findByPetUid(petUid);
-    }
-
-    @Transactional
-    public void deleteBehavioristKyc(UUID uid) throws ValidationException {
-        Optional<PetBehavioristKycEntity> kycOpt = behavioristKycRepo.findByUid(uid);
-        
-        if (!kycOpt.isPresent()) {
-            throw new ValidationException("Behaviorist KYC with UID " + uid + " not found.");
+    public PetBehavioristKycEntity updateStatusByUid(String uid, String status) throws ValidationException {
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(uid);
+        } catch (IllegalArgumentException ex) {
+            throw new ValidationException("INVALID_UID: KYC UID must be a valid UUID.");
         }
-        
-        behavioristKycRepo.delete(kycOpt.get());
+
+        // Validate status string -> enum
+        KycStatus kycStatus;
+        try {
+            kycStatus = KycStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            String allowed = Arrays.stream(KycStatus.values())
+                    .map(Enum::name)
+                    .collect(Collectors.joining(", "));
+            throw new ValidationException("INVALID_KYC_STATUS: '" + status + "' is not valid. Allowed values: " + allowed);
+        }
+
+        // Make sure record exists
+        PetBehavioristKycEntity entity = behavioristKycRepo.findByUid(uuid)
+                .orElseThrow(() -> new ValidationException("KYC_NOT_FOUND: No behaviorist KYC found for the given UID."));
+
+        entity.setKycStatus(kycStatus);
+
+        // You can either use repo.updateKycStatusByUid(...) or just save:
+        // behavioristKycRepo.updateKycStatusByUid(uuid, kycStatus);
+        return behavioristKycRepo.save(entity);
     }
 
-    // ==================== Helpful Search Methods ====================
+    // =====================================================
+    // Helpers: Conversion + Allowed values
+    // =====================================================
 
-    public List<PetBehavioristKycEntity> getKycsWithAggression() {
-        return behavioristKycRepo.findKycsWithAggression();
+    private List<BehavioralChallenges> convertBehavioralChallenges(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            throw new ValidationException("BEHAVIORAL_CHALLENGES_REQUIRED: At least one behavioral challenge must be selected.");
+        }
+
+        try {
+            return values.stream()
+                    .map(v -> {
+                        if (v == null || v.trim().isEmpty()) {
+                            throw new ValidationException("INVALID_BEHAVIORAL_CHALLENGE: Empty value is not allowed.");
+                        }
+                        return BehavioralChallenges.fromString(v);
+                    })
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException ex) {
+            String allowed = Arrays.stream(BehavioralChallenges.values())
+                    .map(BehavioralChallenges::getLabel)
+                    .collect(Collectors.joining(", "));
+            throw new ValidationException("INVALID_BEHAVIORAL_CHALLENGE: " + ex.getMessage()
+                    + ". Allowed values are: " + allowed);
+        }
     }
 
-    public List<PetBehavioristKycEntity> getKycsWithBiteHistory() {
-        return behavioristKycRepo.findKycsWithBiteHistory();
+    private List<AggressiveBehaviors> convertAggressiveBehaviors(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of(); // optional field
+        }
+
+        try {
+            return values.stream()
+                    .map(v -> {
+                        if (v == null || v.trim().isEmpty()) {
+                            throw new ValidationException("INVALID_AGGRESSIVE_BEHAVIOR: Empty value is not allowed.");
+                        }
+                        return AggressiveBehaviors.fromString(v);
+                    })
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException ex) {
+            String allowed = Arrays.stream(AggressiveBehaviors.values())
+                    .map(AggressiveBehaviors::getLabel)
+                    .collect(Collectors.joining(", "));
+            throw new ValidationException("INVALID_AGGRESSIVE_BEHAVIOR: " + ex.getMessage()
+                    + ". Allowed values are: " + allowed);
+        }
     }
 
-    public List<PetBehavioristKycEntity> getWorseningBehaviors() {
-        return behavioristKycRepo.findWorseningBehaviors();
-    }
+    private List<CurrentTrainingTools> convertCurrentTrainingTools(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of(); // optional field
+        }
 
-    public List<PetBehavioristKycEntity> getKycsWithChildren() {
-        return behavioristKycRepo.findKycsWithChildren();
+        try {
+            return values.stream()
+                    .map(v -> {
+                        if (v == null || v.trim().isEmpty()) {
+                            throw new ValidationException("INVALID_TRAINING_TOOL: Empty value is not allowed.");
+                        }
+                        return CurrentTrainingTools.fromString(v);
+                    })
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException ex) {
+            String allowed = Arrays.stream(CurrentTrainingTools.values())
+                    .map(CurrentTrainingTools::getLabel)
+                    .collect(Collectors.joining(", "));
+            throw new ValidationException("INVALID_TRAINING_TOOL: " + ex.getMessage()
+                    + ". Allowed values are: " + allowed);
+        }
     }
-
-    public List<PetBehavioristKycEntity> getVirtualSessionPreferences() {
-        return behavioristKycRepo.findVirtualSessionPreferences();
-    }
-
-    public List<PetBehavioristKycEntity> getInPersonSessionPreferences() {
-        return behavioristKycRepo.findInPersonSessionPreferences();
-    }
-    
-    public List<PetBehavioristKycEntity> getKycsByStatus(KycStatus status) {
-    	return behavioristKycRepo.findByKycStatus(status);
-    	}
 }

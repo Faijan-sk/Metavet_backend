@@ -51,8 +51,8 @@ public class WalkerToClientKycEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private PreferredWalkType preferredWalkType;
     
-    @Column(length = 20)
-    private String preferredWalkDuration; // Store as string: "15", "30", "60", "Custom"
+	    @Column(length = 20)
+	    private String preferredWalkDuration; // Store as string: "15", "30", "60", "Custom"
     
     private Integer customWalkDuration;
     

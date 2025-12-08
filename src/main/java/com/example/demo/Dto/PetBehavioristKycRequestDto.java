@@ -2,91 +2,175 @@ package com.example.demo.Dto;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 public class PetBehavioristKycRequestDto {
 
     // ==================== Pet Reference ====================
-    
-    private String petUid; // UUID string from frontend
+
+    @NotBlank(message = "Pet UID is required")
+    @Pattern(
+        regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        message = "Pet UID must be a valid UUID format"
+    )
+    @Size(max = 100, message = "Pet UID must not exceed 100 characters")
+    private String petUid;
 
     // ==================== Step 1: Behavioral Concern Overview ====================
-    
-    private List<String> behavioralChallenges; // ["Separation anxiety", "Aggression", etc.]
-    
+
+    @NotNull(message = "Behavioral challenges are required")
+    @NotEmpty(message = "At least one behavioral challenge must be selected")
+    private List<String> behavioralChallenges;
+    // NOTE: Allowed values (case-insensitive):
+    // "Separation anxiety", "Aggression", "Excessive barking",
+    // "Leash pulling/reactivity", "Destructive behavior",
+    // "Fearfulness", "Inappropriate elimination", "Other"
+
+    @Size(max = 2000, message = "Aggression description cannot exceed 2000 characters")
     private String aggressionBiteDescription;
-    
+
+    @Size(max = 1000, message = "Other behavior description cannot exceed 1000 characters")
     private String otherBehaviorDescription;
-    
-    private String behaviorStartTime; // "As a puppy", "Within the last year", etc.
-    
-    private String behaviorFrequency; // "Daily", "Weekly", etc.
-    
+
+    @NotBlank(message = "Behavior start time is required")
+    @Size(max = 100, message = "Behavior start time must not exceed 100 characters")
+    @Pattern(
+        regexp = "(?i)^(As a puppy|Within the last year|Recently \\(last 3 months\\))$",
+        message = "Behavior start time must be one of: 'As a puppy', 'Within the last year', 'Recently (last 3 months)'"
+    )
+    private String behaviorStartTime;
+
+    @NotBlank(message = "Behavior frequency is required")
+    @Size(max = 100, message = "Behavior frequency must not exceed 100 characters")
+    @Pattern(
+        regexp = "(?i)^(Daily|Weekly|Occasionally|Only in specific situations)$",
+        message = "Behavior frequency must be one of: 'Daily', 'Weekly', 'Occasionally', 'Only in specific situations'"
+    )
+    private String behaviorFrequency;
+
+    @Size(max = 1000, message = "Specific situations description cannot exceed 1000 characters")
     private String specificSituationsDescription;
 
     // ==================== Step 2: Triggers & Context ====================
-    
+
+    @Size(max = 2000, message = "Known triggers cannot exceed 2000 characters")
     private String knownTriggers;
-    
-    private String behaviorProgress; // "Improved", "Worsened", "Stayed the same"
-    
+
+    @Size(max = 100, message = "Behavior progress must not exceed 100 characters")
+    @Pattern(
+        regexp = "(?i)^(Improved|Worsened|Stayed the same)?$",
+        message = "Behavior progress (if provided) must be one of: 'Improved', 'Worsened', 'Stayed the same'"
+    )
+    private String behaviorProgress;
+
+    @Size(max = 1000, message = "Behavior progress context cannot exceed 1000 characters")
     private String behaviorProgressContext;
-    
-    private List<String> aggressiveBehaviors; // ["Growling", "Snapping", etc.]
-    
+
+    // Optional list
+    private List<String> aggressiveBehaviors;
+    // Allowed values (case-insensitive):
+    // "Growling", "Snapping", "Lunging",
+    // "Biting (human or animal)", "No aggression observed"
+
+    @Size(max = 2000, message = "Serious incidents description cannot exceed 2000 characters")
     private String seriousIncidents;
 
     // ==================== Step 3: Training & Tools History ====================
-    
+
+    @NotNull(message = "Worked with trainer status is required (true/false)")
     private Boolean workedWithTrainer;
-    
+
+    @Size(max = 2000, message = "Trainer approaches cannot exceed 2000 characters")
     private String trainerApproaches;
-    
-    private List<String> currentTrainingTools; // ["Clicker", "Muzzle", etc.]
-    
+
+    // Optional list
+    private List<String> currentTrainingTools;
+    // Allowed values (case-insensitive):
+    // "Clicker", "Muzzle", "Harness", "Prong collar",
+    // "E-collar", "Crate training", "Other"
+
+    @Size(max = 500, message = "Other training tool cannot exceed 500 characters")
     private String otherTrainingTool;
-    
-    private String petMotivation; // "Yes", "No", "Unsure"
-    
+
+    @Size(max = 50, message = "Pet motivation must not exceed 50 characters")
+    @Pattern(
+        regexp = "(?i)^(Yes|No|Unsure)?$",
+        message = "Pet motivation (if provided) must be one of: 'Yes', 'No', 'Unsure'"
+    )
+    private String petMotivation;
+
+    @Size(max = 500, message = "Favorite rewards cannot exceed 500 characters")
     private String favoriteRewards;
 
     // ==================== Step 4: Routine & Environment ====================
-    
+
+    @Size(max = 50, message = "Walks per day must not exceed 50 characters")
     private String walksPerDay;
-    
+
+    @Size(max = 100, message = "Off leash time must not exceed 100 characters")
     private String offLeashTime;
-    
+
+    @Size(max = 100, message = "Time alone must not exceed 100 characters")
     private String timeAlone;
-    
+
+    @Size(max = 500, message = "Exercise stimulation cannot exceed 500 characters")
     private String exerciseStimulation;
-    
+
+    @NotNull(message = "Other pets status is required (true/false)")
     private Boolean otherPets;
-    
+
+    @Size(max = 2000, message = "Other pets details cannot exceed 2000 characters")
     private String otherPetsDetails;
-    
+
+    @NotNull(message = "Children in home status is required (true/false)")
     private Boolean childrenInHome;
-    
+
+    @Size(max = 200, message = "Children ages cannot exceed 200 characters")
     private String childrenAges;
-    
+
+    @Size(max = 2000, message = "Pet response with children cannot exceed 2000 characters")
     private String petResponseWithChildren;
-    
-    private String homeEnvironment; // "Apartment", "House with yard", etc.
-    
+
+    @NotBlank(message = "Home environment is required")
+    @Size(max = 100, message = "Home environment must not exceed 100 characters")
+    @Pattern(
+        regexp = "(?i)^(Apartment|House with yard|Shared/communal|Other)$",
+        message = "Home environment must be one of: 'Apartment', 'House with yard', 'Shared/communal', 'Other'"
+    )
+    private String homeEnvironment;
+
+    @Size(max = 500, message = "Home environment other cannot exceed 500 characters")
     private String homeEnvironmentOther;
 
     // ==================== Step 5: Goals & Expectations ====================
-    
+
+    @Size(max = 3000, message = "Success outcome cannot exceed 3000 characters")
     private String successOutcome;
-    
-    private String openToAdjustments; // "Yes", "No", "Not sure"
-    
-    private String preferredSessionType; // "In-person", "Virtual", "Either is fine"
-    
+
+    @Size(max = 50, message = "Open to adjustments must not exceed 50 characters")
+    @Pattern(
+        regexp = "(?i)^(Yes|No|Not sure)?$",
+        message = "Open to adjustments (if provided) must be one of: 'Yes', 'No', 'Not sure'"
+    )
+    private String openToAdjustments;
+
+    @Size(max = 50, message = "Preferred session type must not exceed 50 characters")
+    @Pattern(
+        regexp = "(?i)^(In-person|Virtual|Either is fine)?$",
+        message = "Preferred session type (if provided) must be one of: 'In-person', 'Virtual', 'Either is fine'"
+    )
+    private String preferredSessionType;
+
+    @Size(max = 3000, message = "Additional notes cannot exceed 3000 characters")
     private String additionalNotes;
 
     // ==================== Consent ====================
-    
-    @NotNull(message = "Consent is required")
+
+    @NotNull(message = "Consent is required to proceed")
     private Boolean consentAccuracy;
 
     // ==================== Getters & Setters ====================
