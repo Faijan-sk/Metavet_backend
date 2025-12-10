@@ -85,7 +85,7 @@ public class PetBehavioristKycService {
 
         // If behaviorFrequency = "Only in specific situations", specificSituationsDescription is required
         if (dto.getBehaviorFrequency() != null &&
-                dto.getBehaviorFrequency().equalsIgnoreCase("Only in specific situations")) {
+                dto.getBehaviorFrequency().equalsIgnoreCase("Only in specific situations") ) {
 
             if (dto.getSpecificSituationsDescription() == null ||
                     dto.getSpecificSituationsDescription().trim().isEmpty()) {

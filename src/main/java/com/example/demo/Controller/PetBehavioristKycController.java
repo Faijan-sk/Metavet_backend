@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.Dto.PetBehavioristKycRequestDto;
 import com.example.demo.Entities.PetBehavioristKycEntity;
 import com.example.demo.Service.PetBehavioristKycService;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
@@ -149,8 +151,50 @@ public class PetBehavioristKycController {
     }
 
     // =====================================================
-    // EXCEPTION HANDLING (Validation + Generic)
+    // EXCEPTION HANDLING (Validation + JSON + Generic)
     // =====================================================
+
+    /**
+     * Handle JSON type mismatch / unreadable body
+     * e.g. behaviorFrequency expected String but got Array.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+
+        logger.warn("HttpMessageNotReadableException: {}", ex.getMessage());
+
+        String message = "Invalid request body. Please check the data types of your fields.";
+
+        Throwable cause = ex.getCause();
+        if (cause instanceof MismatchedInputException mie) {
+
+            // Find which field/path had a type mismatch
+            String path = mie.getPath().stream()
+                    .map(ref -> {
+                        String fieldName = ref.getFieldName();
+                        if (fieldName != null) return fieldName;
+                        if (ref.getIndex() >= 0) return "[" + ref.getIndex() + "]";
+                        return "?";
+                    })
+                    .collect(Collectors.joining("."));
+
+            if ("behaviorFrequency".equals(path)) {
+                message = "Invalid type for field 'behaviorFrequency'. Only a string value is allowed, for example: "
+                        + "\"Daily\", \"Weekly\", \"Occasionally\" or \"Only in specific situations\". "
+                        + "Arrays like [\"Daily\"] or any non-string type are not allowed.";
+            } else {
+                message = "Invalid type for field '" + path + "'. Please send the correct data type.";
+            }
+        }
+
+        Map<String, Object> errorBody = new HashMap<>();
+        errorBody.put("success", false);
+        errorBody.put("errorCode", "INVALID_JSON_TYPE");
+        errorBody.put("message", message);
+        errorBody.put("timestamp", LocalDateTime.now());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody);
+    }
 
     /**
      * Handle jakarta.validation.ValidationException (service/business validation)
