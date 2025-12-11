@@ -83,24 +83,73 @@ public class PetBehavioristKycController {
     }
 
     // =====================================================
-    // 03. GET ALL
+    // 03. GET ALL (UPDATED)
     // GET /api/behaviorist-kyc
     // =====================================================
-    @GetMapping
-    public ResponseEntity<Map<String, Object>> getAllKycs() {
+    // =====================================================
 
-        logger.info("Fetching all Behaviorist KYC records");
+@GetMapping
+public ResponseEntity<?> getAllKycs() {
+    try {
+        logger.info("⚡ API Request: GET /api/behaviorist-kyc (Get All)");
 
-        List<PetBehavioristKycEntity> list = behavioristKycService.getAllKycs();
+        List<PetBehavioristKycEntity> kycs = behavioristKycService.getAllKycs();
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("count", list.size());
-        response.put("timestamp", LocalDateTime.now());
-        response.put("data", list);
+        logger.info("✅ Success: Retrieved {} Behaviorist KYC records", kycs.size());
 
-        return ResponseEntity.ok(response);
+        // Build response data
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("totalRecords", kycs.size());
+        responseData.put("records", kycs);
+
+        // Build success response
+        return ResponseEntity.ok(buildSuccessResponse(
+                "KYC_RECORDS_RETRIEVED",
+                "Behaviorist KYC records retrieved successfully.",
+                responseData));
+
+    } catch (Exception ex) {
+        logger.error("💥 Error fetching all Behaviorist KYCs: ", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(buildErrorResponse(
+                        "INTERNAL_SERVER_ERROR",
+                        "Failed to Retrieve Records",
+                        "Unable to fetch KYC records. Please try again later.",
+                        null,
+                        ex.getMessage()));
     }
+}
+
+// ==================== Helper Methods ====================
+
+private Map<String, Object> buildSuccessResponse(String code, String message, Map<String, Object> data) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("success", true);
+    response.put("code", code);
+    response.put("message", message);
+    response.put("data", data);
+    response.put("timestamp", LocalDateTime.now());
+    return response;
+}
+
+private Map<String, Object> buildErrorResponse(String errorCode, String error, String message, String field, String details) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("success", false);
+    response.put("errorCode", errorCode);
+    response.put("error", error);
+    response.put("message", message);
+
+    if (field != null) {
+        response.put("field", field);
+    }
+
+    if (details != null) {
+        response.put("details", details);
+    }
+
+    response.put("timestamp", LocalDateTime.now());
+    return response;
+}
 
     // =====================================================
     // 04. GET BY UID

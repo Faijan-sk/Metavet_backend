@@ -227,11 +227,11 @@ public class PetBehavioristKycService {
     // =====================================================
     // 03. GET ALL
     // =====================================================
+
     @Transactional(readOnly = true)
     public List<PetBehavioristKycEntity> getAllKycs() {
-        return behavioristKycRepo.findAll();
+        return behavioristKycRepo.findAllByOrderByCreatedAtDesc();
     }
-
     // =====================================================
     // 04. GET BY UID
     // =====================================================

@@ -460,36 +460,70 @@ public class GroomerToClientKycService {
     }
 
     // ==================== Update Status by UID ====================
+//    @Transactional
+//    public GroomerToClientKycEntity updateKycStatusByUid(String uid, String status) throws ValidationException {
+//        Optional<GroomerToClientKycEntity> kycOpt = getGroomerKycByUid(uid);
+//
+//        if (!kycOpt.isPresent()) {
+//            throw new ValidationException("KYC_NOT_FOUND: KYC with UID '" + uid + "' does not exist in the database.");
+//        }
+//
+//        GroomerToClientKycEntity kyc = kycOpt.get();
+//
+//        if (status == null || status.trim().isEmpty()) {
+//            throw new ValidationException("STATUS_REQUIRED: Status field is mandatory. Allowed values: 'PENDING', 'APPROVED', 'REJECTED'");
+//        }
+//
+//        try {
+//            KycStatus newStatus = KycStatus.valueOf(status.toUpperCase());
+//            KycStatus oldStatus = kyc.getStatus();
+//            kyc.setStatus(newStatus);
+//
+//            GroomerToClientKycEntity updatedKyc = groomerKycRepo.save(kyc);
+//
+//            // Log status change for audit
+//            System.out.println("KYC Status Updated - UID: " + uid + ", From: " + oldStatus + ", To: " + newStatus);
+//
+//            return updatedKyc;
+//
+//        } catch (IllegalArgumentException e) {
+//            throw new ValidationException("INVALID_STATUS_VALUE: Status must be one of: 'PENDING', 'APPROVED', 'REJECTED'. Received: '" + status + "'");
+//        }
+//    }
+    
     @Transactional
     public GroomerToClientKycEntity updateKycStatusByUid(String uid, String status) throws ValidationException {
         Optional<GroomerToClientKycEntity> kycOpt = getGroomerKycByUid(uid);
-
         if (!kycOpt.isPresent()) {
-            throw new ValidationException("KYC_NOT_FOUND: KYC with UID '" + uid + "' does not exist in the database.");
+            throw new ValidationException("KYC_NOT_FOUND: ...");
         }
 
         GroomerToClientKycEntity kyc = kycOpt.get();
 
         if (status == null || status.trim().isEmpty()) {
-            throw new ValidationException("STATUS_REQUIRED: Status field is mandatory. Allowed values: 'PENDING', 'APPROVED', 'REJECTED'");
+            throw new ValidationException("STATUS_REQUIRED: ...");
         }
 
         try {
             KycStatus newStatus = KycStatus.valueOf(status.toUpperCase());
             KycStatus oldStatus = kyc.getStatus();
-            kyc.setStatus(newStatus);
 
-            GroomerToClientKycEntity updatedKyc = groomerKycRepo.save(kyc);
+            // Use repository bulk update to avoid full-entity validation
+            UUID uuid = UUID.fromString(uid);
+            int updated = groomerKycRepo.updateStatusByUid(uuid, newStatus);
+            if (updated == 0) {
+                throw new ValidationException("KYC_NOT_FOUND: Unable to update status for UID: " + uid);
+            }
 
-            // Log status change for audit
-            System.out.println("KYC Status Updated - UID: " + uid + ", From: " + oldStatus + ", To: " + newStatus);
-
-            return updatedKyc;
-
+            // re-fetch updated entity to return full record
+            return groomerKycRepo.findByUid(uuid).orElseThrow(() -> new ValidationException("KYC_NOT_FOUND_AFTER_UPDATE"));
         } catch (IllegalArgumentException e) {
-            throw new ValidationException("INVALID_STATUS_VALUE: Status must be one of: 'PENDING', 'APPROVED', 'REJECTED'. Received: '" + status + "'");
+            throw new ValidationException("INVALID_STATUS_VALUE: ...");
         }
     }
+
+    
+    
 
     // ==================== Delete KYC by UID ====================
     @Transactional

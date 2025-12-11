@@ -1,5 +1,6 @@
 package com.example.demo.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ public interface PetBehavioristKycRepo extends JpaRepository<PetBehavioristKycEn
    
     Optional<PetBehavioristKycEntity> findByUid(UUID uid);
 
+    List<PetBehavioristKycEntity> findAllByOrderByCreatedAtDesc();
    
     @Modifying
     @Query("UPDATE PetBehavioristKycEntity p SET p.kycStatus = :status WHERE p.uid = :uid")

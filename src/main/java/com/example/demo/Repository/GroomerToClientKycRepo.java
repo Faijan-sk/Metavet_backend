@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,6 +19,8 @@ import com.example.demo.Entities.GroomerToClientKycEntity.BehaviorIssue;
 import com.example.demo.Entities.GroomerToClientKycEntity.Service;
 import com.example.demo.Entities.GroomerToClientKycEntity.AddOn;
 import com.example.demo.Entities.PetsEntity;
+
+import jakarta.transaction.Transactional;
 
 @Repository
 public interface GroomerToClientKycRepo extends JpaRepository<GroomerToClientKycEntity, Long> {
@@ -109,4 +112,11 @@ public interface GroomerToClientKycRepo extends JpaRepository<GroomerToClientKyc
     // Count by status
     @Query("SELECT COUNT(g) FROM GroomerToClientKycEntity g WHERE g.status = :status")
     long countByStatus(@Param("status") KycStatus status);
+    
+    @Modifying
+    @Transactional
+    @Query("UPDATE GroomerToClientKycEntity g SET g.status = :status WHERE g.uid = :uid")
+    int updateStatusByUid(@Param("uid") UUID uid, @Param("status") com.example.demo.Entities.GroomerToClientKycEntity.KycStatus status);
+    
+    
 }
