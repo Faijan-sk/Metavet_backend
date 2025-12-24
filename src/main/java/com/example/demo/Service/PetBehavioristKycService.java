@@ -223,15 +223,14 @@ public class PetBehavioristKycService {
 
         behavioristKycRepo.deleteByUid(uuid);
     }
-
-    // =====================================================
-    // 03. GET ALL
-    // =====================================================
-
-    @Transactional(readOnly = true)
-    public List<PetBehavioristKycEntity> getAllKycs() {
-        return behavioristKycRepo.findAllByOrderByCreatedAtDesc();
-    }
+ // ===================================================== 
+ // 03. GET ALL - CORRECTED VERSION
+ // ===================================================== 
+ public List<PetBehavioristKycEntity> findAll() {
+     return behavioristKycRepo.findAllByOrderByCreatedAtDesc();
+     // ⚠️ Use the instance variable 'behavioristKycRepo', NOT 'PetBehavioristKycRepo'
+ }
+   
     // =====================================================
     // 04. GET BY UID
     // =====================================================

@@ -19,7 +19,6 @@ public interface PetBehavioristKycRepo extends JpaRepository<PetBehavioristKycEn
    
     void deleteByUid(UUID uid);
 
-   
     Optional<PetBehavioristKycEntity> findByUid(UUID uid);
 
     List<PetBehavioristKycEntity> findAllByOrderByCreatedAtDesc();
@@ -27,4 +26,10 @@ public interface PetBehavioristKycRepo extends JpaRepository<PetBehavioristKycEn
     @Modifying
     @Query("UPDATE PetBehavioristKycEntity p SET p.kycStatus = :status WHERE p.uid = :uid")
     int updateKycStatusByUid(@Param("uid") UUID uid, @Param("status") KycStatus status);
+   
+    
+    
+    
+    
+    
 }
