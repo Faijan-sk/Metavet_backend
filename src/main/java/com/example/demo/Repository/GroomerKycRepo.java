@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.demo.Entities.GroomerKyc;
+import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Entities.GroomerKyc.ApplicationStatus;
 import com.example.demo.Entities.GroomerKyc.ServiceLocationType;
 
@@ -48,4 +49,9 @@ public interface GroomerKycRepo extends JpaRepository<GroomerKyc, Long> {
     List<GroomerKyc> findByStatusOrderByCreatedAtDesc(@Param("status") ApplicationStatus status);
 
 
+    
+    GroomerKyc findByUserUid(UUID uid);
+
+    
+    
 }

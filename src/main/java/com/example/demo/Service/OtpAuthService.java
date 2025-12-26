@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Entities.UsersEntity;
+import com.example.demo.Repository.ServiceProviderRepo;
 import com.example.demo.Repository.UserRepo;
 
 @Service
@@ -23,6 +25,9 @@ public class OtpAuthService {
     
     @Autowired
     private JwtService jwtService;
+    
+    @Autowired
+    private ServiceProviderRepo serviceProviderRepository;
 
     /**
      * Verify OTP using the temporary Base64 token (format: phoneNumber:timestamp)
@@ -154,6 +159,13 @@ public class OtpAuthService {
             userData.put("userId", authenticatedUser.getUid());
             userData.put("id", authenticatedUser.getId());
             userData.put("isProfileCompleted", authenticatedUser.isProfileCompleted());
+            if(authenticatedUser.getUserType() == 3) {
+            	
+            	ServiceProvider serviceProvider = serviceProviderRepository.findByOwnerUid(authenticatedUser.getUid());
+            	
+            	userData.put("ServiceType", serviceProvider.serviceType);
+            	
+            }
 
             // 9. Response structure matching controller expectation
             response.put("status", "success");

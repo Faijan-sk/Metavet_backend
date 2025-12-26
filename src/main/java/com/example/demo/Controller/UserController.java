@@ -10,7 +10,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.Service.ServiceProviderService;
 import com.example.demo.Service.UserService;
+import com.example.demo.Dto.ApiResponse;
+import com.example.demo.Dto.ServiceProviderRequestDto;
 import com.example.demo.Entities.UsersEntity;
 
 import jakarta.validation.Valid;
@@ -24,6 +27,9 @@ public class UserController {
     
     @Autowired
     private UserService userService;
+    
+    @Autowired
+	ServiceProviderService serviceProviderService;
     
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody UsersEntity request, BindingResult bindingResult) {
@@ -92,4 +98,10 @@ public class UserController {
         userData.put("token", user.getToken());
         return userData;
     }
+    
+	
+	@PostMapping("/service-provider/create")
+	public ApiResponse<?> createServiceProvider(@RequestBody ServiceProviderRequestDto dto){
+		return serviceProviderService.createService(dto);
+	}
 }

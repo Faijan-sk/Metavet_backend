@@ -12,14 +12,20 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
+import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Dto.GroomerKycRequestDto;
 import com.example.demo.Entities.GroomerKyc;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.GroomerKyc.ApplicationStatus;
 import com.example.demo.Entities.GroomerKyc.ServiceOffered;
+import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Repository.GroomerKycRepo;
+import com.example.demo.Repository.ServiceProviderRepo;
 
 import jakarta.validation.ValidationException;
 
@@ -28,6 +34,17 @@ public class GroomerKycService {
 
 	@Autowired
 	private GroomerKycRepo groomerKycRepository;
+	
+	@Autowired
+    private SpringSecurityAuditorAware auditorAware;
+    
+	@Autowired
+	private ServiceProviderRepo serviceProviderRepository ;
+	
+	
+	
+	
+	
 
 	private static final String DOCUMENT_ROOT = System.getProperty("user.dir");
 	private static final String QrFolder = "groomer_kyc";
@@ -233,6 +250,58 @@ public class GroomerKycService {
 		// Set default status
 		kyc.setStatus(ApplicationStatus.PENDING);
 
+		
+		
+		
+		
+		// ----------- SERVICE PROVIDER VALIDATION (FIXED) ------------
+
+		UsersEntity owner = auditorAware.getCurrentAuditor().orElse(null);
+
+		// Step 1: check logged-in user
+		if (owner == null) {
+		    throw new ValidationException("❌ No logged-in user found");
+		}
+
+		// Step 2: check owner UID
+		if (owner.getUid() == null) {
+		    throw new ValidationException("❌ Logged-in user does not have a UID");
+		}
+
+		// Step 3: fetch service provider record
+		ServiceProvider serviceProvider = serviceProviderRepository.findByOwnerUid(owner.getUid());
+
+	
+		// Step 4: check record found
+		if (serviceProvider == null) {
+		    throw new ValidationException("❌ You are not Pet Groomer");
+		}
+
+		// Step 5: check correct service type (Pet Groomer only)
+		if (serviceProvider.getServiceType() != ServiceProvider.ServiceType.Pet_Groomer) {
+		    throw new ValidationException("❌ Only Pet Groomer can fill this KYC");
+		}
+		
+		kyc.setUser(owner);
+		
+		System.out.println("Service type validated: " + serviceProvider.getServiceType());
+
+		// associate service provider with KYC
+		kyc.setServiceProvider(serviceProvider);
+
+		
+	
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		// Save and return
 		GroomerKyc savedKyc = groomerKycRepository.save(kyc);
 		return copyToDto(savedKyc);
@@ -241,6 +310,9 @@ public class GroomerKycService {
 	// ===================== GET ALL METHOD =====================
 	public List<GroomerKycRequestDto> getAll() {
 		List<GroomerKyc> allDocuments = groomerKycRepository.findAllByOrderByCreatedAtDesc();
+		
+		
+	
 		return allDocuments.stream().map(this::copyToDto).collect(Collectors.toList());
 	}
 
@@ -425,4 +497,34 @@ public class GroomerKycService {
 
 		return filePath;
 	}
+	
+	public ResponseEntity<ApiResponse<?>>statusCheck() {
+		UsersEntity owner = auditorAware.getCurrentAuditor().orElse(null);
+
+	    // check login
+	    if (owner == null) {
+	        return ResponseEntity
+	                .status(401)
+	                .body(ApiResponse.error("Unauthorized user"));
+	    }
+	    
+		GroomerKyc kyc = groomerKycRepository.findByUserUid(owner.getUid());
+		
+		
+		if (kyc == null) {
+	        return ResponseEntity
+	                .status(404)
+	                .body(ApiResponse.error("KYC is not completed"));
+	    }
+
+	    // ✔ KYC exists → send data
+	    return ResponseEntity
+	            .status(200)
+	            .body(ApiResponse.success("KYC fetched successfully"));
+	
+	}
+	
+	
+	
+	
 }

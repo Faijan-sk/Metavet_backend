@@ -7,6 +7,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 
@@ -14,6 +16,14 @@ import jakarta.validation.constraints.Email;
 //@Table(name = "metavet_to_groomer_kyc")
 public class GroomerKyc extends BaseEntity {
 
+	@OneToOne
+	@JoinColumn(referencedColumnName = "uid", name = "service_provider_uid")
+	ServiceProvider serviceProvider;
+	
+	@OneToOne
+	@JoinColumn(referencedColumnName = "uid", name = "user_uid")
+	UsersEntity user ;
+	
 	// Personal & Business Information
 	@Column(nullable = false)
 	private String fullLegalName;
@@ -527,10 +537,31 @@ public class GroomerKyc extends BaseEntity {
 	    ServiceOffered(String label) {
 	        this.label = label;
 	    }
-//ss
+
+	    
+	    
 	    public String getLabel() {
 	        return label;
 	    }
 	}
+
+	public ServiceProvider getServiceProvider() {
+		return serviceProvider;
+	}
+
+	public void setServiceProvider(ServiceProvider serviceProvider) {
+		this.serviceProvider = serviceProvider;
+	}
+
+	public UsersEntity getUser() {
+		return user;
+	}
+
+	public void setUser(UsersEntity user) {
+		this.user = user;
+	}
+	
+	
+	
 
 }

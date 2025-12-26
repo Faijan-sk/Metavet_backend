@@ -522,4 +522,12 @@ public class GroomerKycController {
 					.body(ApiResponse.serverError("Failed to update application status."));
 		}
 	}
+	
+	@GetMapping("/statusCheck")
+	public ResponseEntity<ApiResponse<?>> statusCheck(){
+		return groomerKycService.statusCheck();
+	}
+	
+	
+	
 }
