@@ -14,6 +14,8 @@ import com.example.demo.Service.ServiceProviderService;
 import com.example.demo.Service.UserService;
 import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Dto.ServiceProviderRequestDto;
+import com.example.demo.Dto.UserRequestDto;
+import com.example.demo.Dto.UserResponseDto;
 import com.example.demo.Entities.UsersEntity;
 
 import jakarta.validation.Valid;
@@ -32,7 +34,7 @@ public class UserController {
 	ServiceProviderService serviceProviderService;
     
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody UsersEntity request, BindingResult bindingResult) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody UserRequestDto request, BindingResult bindingResult) {
         try {
             // Check for validation errors
             if (bindingResult.hasErrors()) {
@@ -50,7 +52,7 @@ public class UserController {
             }
             
             // Call service and get saved user (with OTP + Token in response only)
-            UsersEntity savedUser = userService.registerUser(request);
+            UserResponseDto savedUser = userService.registerUser(request);
             
             // Check for null (email/phone already exists or invalid user type)
             if (savedUser == null) {
@@ -63,8 +65,8 @@ public class UserController {
             // Success response with OTP and Token
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "User Created Successfully as " + savedUser.getUserTypeAsString());
-            response.put("data", getUserData(savedUser));
+            response.put("message", "User Created Successfully " );
+            response.put("data", savedUser );
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             

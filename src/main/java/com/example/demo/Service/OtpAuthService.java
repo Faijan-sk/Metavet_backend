@@ -19,21 +19,21 @@ public class OtpAuthService {
 
     @Autowired
     private UserRepo userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
     
     @Autowired
     private JwtService jwtService;
     
     @Autowired
     private ServiceProviderRepo serviceProviderRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;  // ✅ Added for OTP verification
 
     /**
      * Verify OTP using the temporary Base64 token (format: phoneNumber:timestamp)
      * - Token validity: 5 minutes
-     * - Compares encoded OTP stored in DB with provided OTP using PasswordEncoder.matches()
-     * - On success: clears OTP from DB, marks profile completed (if applicable),
+     * - Compares encoded OTP in DB with provided plain OTP using PasswordEncoder
+     * - On success: clears OTP from DB, marks profile completed,
      *   generates JWT access & refresh tokens and returns user data + tokens.
      *
      * Returns a Map with keys:
@@ -47,19 +47,21 @@ public class OtpAuthService {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // 1. Validate token
             if (token == null || token.trim().isEmpty()) {
                 response.put("status", "failed");
                 response.put("message", "Token is required");
                 return response;
             }
 
+            // 2. Validate OTP format
             if (otp == null || !otp.matches("^[0-9]{4}$")) {
                 response.put("status", "failed");
                 response.put("message", "OTP must be 4 digits");
                 return response;
             }
 
-            // 1. Base64 decode the token
+            // 3. Base64 decode the token
             byte[] decodedBytes;
             try {
                 decodedBytes = Base64.getDecoder().decode(token);
@@ -71,7 +73,7 @@ public class OtpAuthService {
 
             String decodedString = new String(decodedBytes);
 
-            // 2. Parse token format: "phoneNumber:timestamp"
+            // 4. Parse token format: "phoneNumber:timestamp"
             String[] parts = decodedString.split(":");
             if (parts.length != 2) {
                 response.put("status", "failed");
@@ -89,7 +91,7 @@ public class OtpAuthService {
                 return response;
             }
 
-            // 3. Check token expiry (5 minutes validity)
+            // 5. Check token expiry (5 minutes validity)
             long currentTime = System.currentTimeMillis();
             if (currentTime > (timestamp + 5 * 60 * 1000)) {
                 response.put("status", "failed");
@@ -97,7 +99,7 @@ public class OtpAuthService {
                 return response;
             }
 
-            // 4. Fetch user from database (repository returns Optional)
+            // 6. Fetch user from database
             Optional<UsersEntity> optionalUser = userRepository.findByPhoneNumber(phoneNumber);
             if (optionalUser.isEmpty()) {
                 response.put("status", "failed");
@@ -106,36 +108,26 @@ public class OtpAuthService {
             }
             UsersEntity user = optionalUser.get();
 
-            // 5. Verify stored OTP using PasswordEncoder.matches()
-            if (user.getOtp() == null) {
+            // 7. Verify stored OTP exists
+            if (user.getOtp() == null || user.getOtp().trim().isEmpty()) {
                 response.put("status", "failed");
                 response.put("message", "No OTP found for this user");
                 return response;
             }
 
-            boolean isOtpValid = passwordEncoder.matches(otp, user.getOtp());
-
-            if (!isOtpValid) {
+            // ✅ FIXED: Use passwordEncoder.matches() to compare encoded OTP
+            if (!passwordEncoder.matches(otp, user.getOtp())) {
                 response.put("status", "failed");
                 response.put("message", "Invalid OTP");
                 return response;
             }
 
-            // 6. OTP is valid -> clear OTP and mark profile completed (if your model supports it)
-            try {
-                user.setOtp(null);
-            } catch (Exception ignored) {
-                // In case setOtp is not available, ignore — but repo earlier shows it's present.
-            }
-            try {
-                user.setProfileCompleted(true);
-            } catch (Exception ignored) {
-                // If UsersEntity doesn't have setProfileCompleted, ignore
-            }
-
+            // 8. OTP is valid -> clear OTP and mark profile completed
+            user.setOtp(null);
+            user.setProfileCompleted(true);
             UsersEntity authenticatedUser = userRepository.save(user);
 
-            // 7. Generate JWT tokens using jwtService
+            // 9. Generate JWT tokens using jwtService
             String jwtAccessToken;
             String jwtRefreshToken;
 
@@ -148,7 +140,7 @@ public class OtpAuthService {
                 return response;
             }
 
-            // 8. Prepare success response - USER DATA
+            // 10. Prepare success response - USER DATA
             Map<String, Object> userData = new HashMap<>();
             userData.put("firstName", authenticatedUser.getFirstName());
             userData.put("lastName", authenticatedUser.getLastName());
@@ -159,25 +151,35 @@ public class OtpAuthService {
             userData.put("userId", authenticatedUser.getUid());
             userData.put("id", authenticatedUser.getId());
             userData.put("isProfileCompleted", authenticatedUser.isProfileCompleted());
+            
+            // 11. If Service Provider, fetch and add service type
             if(authenticatedUser.getUserType() == 3) {
-            	
-            	ServiceProvider serviceProvider = serviceProviderRepository.findByOwnerUid(authenticatedUser.getUid());
-            	
-            	userData.put("ServiceType", serviceProvider.serviceType);
-            	
+                try {
+                    ServiceProvider serviceProvider = serviceProviderRepository.findByOwnerUid(authenticatedUser.getUid());
+                    if (serviceProvider != null) {
+                        userData.put("serviceType", serviceProvider.getServiceType());
+                    } else {
+                        userData.put("serviceType", null);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error fetching service provider: " + e.getMessage());
+                    userData.put("serviceType", null);
+                }
             }
 
-            // 9. Response structure matching controller expectation
+            // 12. Success response structure
             response.put("status", "success");
+            response.put("message", "OTP verified successfully");
             response.put("phoneNumber", phoneNumber);
             response.put("userData", userData);
             response.put("accessToken", jwtAccessToken);
             response.put("refreshToken", jwtRefreshToken);
 
         } catch (Exception e) {
-            // Generic fallback
+            // Generic fallback for unexpected errors
             response.put("status", "error");
             response.put("message", "Verification failed: " + e.getMessage());
+            e.printStackTrace(); // Log for debugging
         }
 
         return response;

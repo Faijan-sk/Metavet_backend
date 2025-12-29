@@ -8,7 +8,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.Repository.ServiceProviderRepo;
 import com.example.demo.Repository.UserRepo;
+
+import jakarta.transaction.Transactional;
+
+import com.example.demo.Dto.UserRequestDto;
+import com.example.demo.Dto.UserResponseDto;
+import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Entities.UsersEntity;
 
 @Service
@@ -20,80 +27,101 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
     
+    @Autowired
+    private ServiceProviderRepo serviceProviderRepo ;
+    
     /**
      * Register new user with validation
      * @param request - User registration request
      * @return UsersEntity - Saved user with OTP and token, null if validation fails
      */
-    public UsersEntity registerUser(UsersEntity request) {
-        
-        // Email validation - check if email already exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            return null; // Controller will handle this
-        }
-        
-        // Phone number validation - check if phone number already exists
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            return null; // Controller will handle this
-        }
-        
-        // User type validation
-        if (request.getUserType() == null || 
-            request.getUserType() < 1 || 
-            request.getUserType() > 3) {
-            return null; // Controller will handle this
-        }
-        
-        // Create new user entity
-        UsersEntity user = new UsersEntity();
-       
-        user.setEmail(request.getEmail());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setCountryCode(request.getCountryCode()); 
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setUserType(request.getUserType());
-        
-        // Generate OTP for verification
-        String rawOtp = generateOtp();
-        
-        // Encode OTP before saving to database for security
-        String encodedOtp = passwordEncoder.encode(rawOtp);
-        user.setOtp(encodedOtp);
-        
-        // Save user to database
-        // NOTE: BaseEntity automatically sets id, uid, createdAt, updatedAt via @PrePersist
-        UsersEntity savedUser = userRepository.save(user);
-        
-        // Set plain OTP for response (not saving to DB)
-        savedUser.setOtp(rawOtp);
-        
-        // Generate JWT-like token using full phone number (country code + phone number)
-        String token = generateToken(request.getPhoneNumber());
-        savedUser.setToken(token);
-   
-        return savedUser;
-    }
-    
-    /**
-     * Helper method to generate 4-digit OTP
-     * @return String - Generated OTP
+     /**
+     * Register new user with validation
+     * @Transactional ensures rollback if ServiceProvider creation fails
      */
+   @Transactional  
+public UserResponseDto registerUser(UserRequestDto request) {
+
+    // --- Validations ---
+    if (userRepository.existsByEmail(request.getEmail())) {
+        throw new RuntimeException("Email already exists");
+    }
+
+    if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+        throw new RuntimeException("Phone number already exists");
+    }
+
+    if (request.getUserType() == null || request.getUserType() < 1 || request.getUserType() > 3) {
+        throw new RuntimeException("Invalid user type");
+    }
+
+    // --- Create User ---
+    UsersEntity user = new UsersEntity();
+    user.setEmail(request.getEmail());
+    user.setFirstName(request.getFirstName());
+    user.setLastName(request.getLastName());
+    user.setCountryCode(request.getCountryCode());
+    user.setPhoneNumber(request.getPhoneNumber());
+    user.setUserType(request.getUserType());
+
+  
+    String rawOtp = generateOtp();
+
+  
+    String EncodedOtp = passwordEncoder.encode(rawOtp);
+    user.setOtp(EncodedOtp);
+
+    UsersEntity savedUser = userRepository.save(user);
+
+    // --- If Service Provider ---
+    if (request.getUserType() == 3) {
+
+        if (request.getServiceType() == null || request.getServiceType().trim().isEmpty()) {
+            throw new RuntimeException("Service type is required for Service Provider");
+        }
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+
+        try {
+            ServiceProvider.ServiceType type =
+                    ServiceProvider.ServiceType.valueOf(request.getServiceType());
+            serviceProvider.setServiceType(type);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid serviceType: " + request.getServiceType() +
+                    ". Valid types are: Pet_Walker, Pet_Groomer, Pet_Behaviourist");
+        }
+
+        serviceProvider.setOwner(savedUser);
+        serviceProviderRepo.save(serviceProvider);
+    }
+
+    // --- Prepare Response ONLY (not saved in DB) ---
+     
+    UserResponseDto responseDto = new UserResponseDto();
+    
+    
+    responseDto.setOtp(rawOtp);
+    responseDto.setToken(generateToken(request.getPhoneNumber()));
+    
+//    savedUser.setOtp(rawOtp);             
+//    savedUser.setToken(generateToken(request.getPhoneNumber()));
+
+    return responseDto;
+}
+
+    
     private String generateOtp() {
         int otp = 1000 + (int) (Math.random() * 9000);
         return String.valueOf(otp);
     }
     
-    /**
-     * Token Generator using Base64 encoding
-     * @param phoneNumber - Phone number (without country code for token generation)
-     * @return String - Base64 encoded token
-     */
     private String generateToken(String phoneNumber) {
         String rawData = phoneNumber + ":" + System.currentTimeMillis();
         return Base64.getEncoder().encodeToString(rawData.getBytes());
     }
     
+    
+   
     /**
      * Verify OTP for user authentication
      * @param phoneNumber - User's phone number
