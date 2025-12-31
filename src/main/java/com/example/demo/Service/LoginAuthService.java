@@ -63,13 +63,12 @@ public class LoginAuthService {
             response.put("status", "success");
             response.put("message", "OTP generated successfully");
             response.put("phone_number", phoneNumber);
-            response.put("countryCode", countryCode);
+           
             response.put("otp", rawOtp); // Only for testing - remove in production
             response.put("token", token);
-            response.put("userType", user.getUserType());
-            response.put("userTypeName", user.getUserTypeAsString());
-            response.put("uid", user.getUid());
-            response.put("id", user.getId());
+          
+           
+           
 
             return response;
 

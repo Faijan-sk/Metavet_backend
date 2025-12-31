@@ -15,6 +15,7 @@ public class ApiResponse<T> {
     private LocalDateTime timestamp;
     private Integer statusCode;
     private String error;                     // general error / error code
+    private String status;                    // custom status like PENDING, APPROVED
     private Map<String, String> errors;       // field-wise validation errors
 
     // ---------- CONSTRUCTORS ----------
@@ -47,28 +48,33 @@ public class ApiResponse<T> {
 
     // ---------- STATIC FACTORY METHODS ----------
 
-    // ✅ Success with data (default message)
+    // Success with data
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(true, "Operation successful", data, 200);
     }
 
-    // ✅ Success with custom message + data
     public static <T> ApiResponse<T> success(String message, T data) {
         return new ApiResponse<>(true, message, data, 200);
     }
 
-    // ✅ Success with message only (no data)
     public static <T> ApiResponse<T> success(String message) {
         return new ApiResponse<>(true, message, null, 200);
     }
 
-    // ✅ Simple error (no field errors)
+    // Error without custom status
     public static <T> ApiResponse<T> error(String message) {
         return new ApiResponse<>(false, message, null, 400);
     }
 
-    public static <T> ApiResponse<T> error(String message, Integer statusCode) {
+    public static <T> ApiResponse<T> error(String message, Integer statusCode ) {
         return new ApiResponse<>(false, message, null, statusCode);
+    }
+
+    // ❗ FIXED: `status` ab alag key me jayega, error me nahi
+    public static <T> ApiResponse<T> error(String message, Integer statusCode, String status) {
+        ApiResponse<T> response = new ApiResponse<>(false, message, null, statusCode);
+        response.setStatus(status);  // <-- yaha status set ho raha hai
+        return response;
     }
 
     public static <T> ApiResponse<T> error(String message, String error) {
@@ -91,7 +97,7 @@ public class ApiResponse<T> {
         return new ApiResponse<>(false, message, null, 500);
     }
 
-    // ✅ Validation error: multiple field errors (replacement of ApiResponseForWalker.error(message, Map))
+    // Validation errors
     public static <T> ApiResponse<T> validationError(String message, Map<String, String> fieldErrors) {
         ApiResponse<T> response = new ApiResponse<>();
         response.setSuccess(false);
@@ -101,7 +107,6 @@ public class ApiResponse<T> {
         return response;
     }
 
-    // ✅ Validation error: single field error (replacement of error(message, field, fieldError))
     public static <T> ApiResponse<T> validationError(String message, String field, String fieldError) {
         Map<String, String> errors = new HashMap<>();
         errors.put(field, fieldError);
@@ -111,31 +116,27 @@ public class ApiResponse<T> {
     // ---------- GETTERS & SETTERS ----------
 
     public boolean isSuccess() { return success; }
-
     public void setSuccess(boolean success) { this.success = success; }
 
     public String getMessage() { return message; }
-
     public void setMessage(String message) { this.message = message; }
 
     public T getData() { return data; }
-
     public void setData(T data) { this.data = data; }
 
     public LocalDateTime getTimestamp() { return timestamp; }
-
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
 
     public Integer getStatusCode() { return statusCode; }
-
     public void setStatusCode(Integer statusCode) { this.statusCode = statusCode; }
 
     public String getError() { return error; }
-
     public void setError(String error) { this.error = error; }
 
-    public Map<String, String> getErrors() { return errors; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
+    public Map<String, String> getErrors() { return errors; }
     public void setErrors(Map<String, String> errors) { this.errors = errors; }
 
     @Override
@@ -147,6 +148,7 @@ public class ApiResponse<T> {
                 ", timestamp=" + timestamp +
                 ", statusCode=" + statusCode +
                 ", error='" + error + '\'' +
+                ", status='" + status + '\'' +
                 ", errors=" + errors +
                 '}';
     }

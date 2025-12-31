@@ -6,7 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,10 +42,6 @@ public class GroomerKycService {
     
 	@Autowired
 	private ServiceProviderRepo serviceProviderRepository ;
-	
-	
-	
-	
 	
 
 	private static final String DOCUMENT_ROOT = System.getProperty("user.dir");
@@ -498,31 +496,32 @@ public class GroomerKycService {
 		return filePath;
 	}
 	
-	public ResponseEntity<ApiResponse<?>>statusCheck() {
-		UsersEntity owner = auditorAware.getCurrentAuditor().orElse(null);
-
-	    // check login
-	    if (owner == null) {
-	        return ResponseEntity
-	                .status(401)
-	                .body(ApiResponse.error("Unauthorized user"));
-	    }
-	    
-		GroomerKyc kyc = groomerKycRepository.findByUserUid(owner.getUid());
+	public ResponseEntity<ApiResponse<?>> statusCheck() {
 		
-		
-		if (kyc == null) {
-	        return ResponseEntity
-	                .status(404)
-	                .body(ApiResponse.error("KYC is not completed"));
-	    }
+    UsersEntity owner = auditorAware.getCurrentAuditor().orElse(null);
 
-	    // ✔ KYC exists → send data
-	    return ResponseEntity
-	            .status(200)
-	            .body(ApiResponse.success("KYC fetched successfully"));
-	
-	}
+    if (owner == null) {
+        return ResponseEntity
+                .status(401)
+                .body(ApiResponse.error("Unauthorized user", 401));
+    }
+
+    GroomerKyc kyc = groomerKycRepository.findByUserUid(owner.getUid());
+
+    if (kyc == null) {
+        return ResponseEntity
+                .status(404)
+                .body(ApiResponse.error("KYC is nost completed", 404 , "NOT_FOUND"));
+    }
+
+    
+    ApiResponse<?> response = ApiResponse.success("KYC fetched successfully", null);
+    response.setStatus(kyc.getStatus().name());       // ⭐ ADDED: status top-level
+    response.setStatusCode(200);               // ensure correct statusCode
+
+    return ResponseEntity.ok(response);
+}
+
 	
 	
 	
