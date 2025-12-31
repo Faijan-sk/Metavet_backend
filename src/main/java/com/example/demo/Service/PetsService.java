@@ -33,6 +33,7 @@ public class PetsService {
     @Autowired
     private SpringSecurityAuditorAware auditorAware;
     
+    
     // Create a new pet
     public PetsEntity createPet(PetsEntity pet) {
         try {

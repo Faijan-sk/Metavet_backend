@@ -11,6 +11,7 @@ import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Repository.ServiceProviderRepo;
 import com.example.demo.Repository.UserRepo;
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.ApiResponse;
 
 @Service
@@ -22,10 +23,21 @@ public class ServiceProviderService {
 	@Autowired
 	private UserRepo userRepository;
 	
+	@Autowired
+    private SpringSecurityAuditorAware auditorAware;
+    
+	
+    
+	
 	
 	public ApiResponse<?> createService(ServiceProviderRequestDto dto) {
+		
+		UsersEntity owner = auditorAware.getCurrentAuditor().orElse(null);
+
 	    try {
-	        UUID userUid = UUID.fromString(dto.getUid());
+	    	
+	    	UUID userUid = owner.getUid();
+	    	
 	        Optional<UsersEntity> user = userRepository.findByUid(userUid);
 
 	        if (user.isEmpty()) {

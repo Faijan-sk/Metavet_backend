@@ -14,6 +14,7 @@ import com.example.demo.Repository.UserRepo;
 import jakarta.transaction.Transactional;
 
 import com.example.demo.Dto.UserRequestDto;
+import com.example.demo.Dto.UserRequestMobileDto;
 import com.example.demo.Dto.UserResponseDto;
 import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Entities.UsersEntity;
@@ -108,6 +109,65 @@ public UserResponseDto registerUser(UserRequestDto request) {
 
     return responseDto;
 }
+   
+   
+   
+   
+   
+   
+   
+   
+   public UserResponseDto registerUserForMobile(UserRequestMobileDto request) {
+	   
+	   
+	   
+	   if (userRepository.existsByEmail(request.getEmail())) {
+	        throw new RuntimeException("Email already exists");
+	    }
+
+	    if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+	        throw new RuntimeException("Phone number already exists");
+	    }
+
+	    if (request.getUserType() == null || request.getUserType() < 1 || request.getUserType() > 3) {
+	        throw new RuntimeException("Invalid user type");
+	    }
+	    
+	    // --- Create User ---
+	    UsersEntity user = new UsersEntity();
+	    user.setEmail(request.getEmail());
+	    user.setFirstName(request.getFirstName());
+	    user.setLastName(request.getLastName());
+	    user.setCountryCode(request.getCountryCode());
+	    user.setPhoneNumber(request.getPhoneNumber());
+	    user.setUserType(request.getUserType());
+
+	    String rawOtp = generateOtp();
+
+	    
+	    String EncodedOtp = passwordEncoder.encode(rawOtp);
+	    user.setOtp(EncodedOtp);
+
+	    UsersEntity savedUser = userRepository.save(user);
+	    
+	   
+	 // --- Prepare Response ONLY (not saved in DB) ---
+	     
+	    UserResponseDto responseDto = new UserResponseDto();
+	    
+	    responseDto.setOtp(rawOtp);
+	    responseDto.setToken(generateToken(request.getPhoneNumber()));
+	    
+	    
+	   
+	   
+	   return responseDto;
+   }
+   
+   
+   
+   
+   
 
     
     private String generateOtp() {

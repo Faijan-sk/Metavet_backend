@@ -15,6 +15,7 @@ import com.example.demo.Service.UserService;
 import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Dto.ServiceProviderRequestDto;
 import com.example.demo.Dto.UserRequestDto;
+import com.example.demo.Dto.UserRequestMobileDto;
 import com.example.demo.Dto.UserResponseDto;
 import com.example.demo.Entities.UsersEntity;
 
@@ -78,6 +79,59 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    
+    
+    
+    
+    @PostMapping("/mobile/register")
+    public ResponseEntity<?> registerUserone(@Valid @RequestBody UserRequestMobileDto request, BindingResult bindingResult) {
+        try {
+            // Check for validation errors
+            if (bindingResult.hasErrors()) {
+                Map<String, String> errors = new HashMap<>();
+                for (FieldError error : bindingResult.getFieldErrors()) {
+                    errors.put(error.getField(), error.getDefaultMessage());
+                }
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Validation failed");
+                response.put("errors", errors);
+                
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            // Call service and get saved user (with OTP + Token in response only)
+            UserResponseDto savedUser = userService.registerUserForMobile(request);
+            
+            // Check for null (email/phone already exists or invalid user type)
+            if (savedUser == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Email or phone number already exists, or invalid user type");
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+            }
+            
+            // Success response with OTP and Token
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "User Created Successfully " );
+            response.put("data", savedUser );
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Registration failed");
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    
+    
+    
     
     /**
      * Helper method to format user data for response
