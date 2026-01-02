@@ -3,8 +3,11 @@ package com.example.demo.Service;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -228,6 +231,10 @@ public UserResponseDto registerUser(UserRequestDto request) {
      */
     public Optional<UsersEntity> getUserById(Long userId) {
         return userRepository.findById(userId);
+    }
+    
+    public Optional<UsersEntity> getUserByUuid(UUID uid){
+    	return userRepository.findByUid(uid);
     }
     
     /**
@@ -460,4 +467,27 @@ public UserResponseDto registerUser(UserRequestDto request) {
         
         return user;
     }
+   
+    
+    public ResponseEntity<?> deleteClientByUid(UUID uid) {
+
+        Optional<UsersEntity> optionalUser = userRepository.findByUid(uid);
+
+        // ❌ User not found
+        if (optionalUser.isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("User not found");
+        }
+
+        // ✅ Delete user
+        userRepository.delete(optionalUser.get());
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body("Client deleted successfully");
+    }
+    
+    
+    
 }

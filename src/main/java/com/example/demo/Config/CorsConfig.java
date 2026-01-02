@@ -20,9 +20,9 @@ public class CorsConfig {
             "http://localhost:3000",           // Local React dev
             "http://localhost:5173", 
 "http://localhost:5174",// Local Angular dev  
-            "http://35.206.66.49",            // GCP frontend (port 80) - MAIN b URL
-            "http://34.71.120.171:8080",
-            "http://34.71.120.171:8181",
+            "http://34.10.49.96",            // GCP frontend (port 80) - MAIN b URL
+            "http://34.10.49.96:8080",
+            "http://34.10.49.96:8181",
             "http://34.71.120.171:8282",
             "http://34.71.120.171:8282",
             "https://34.71.120.171:8282",
