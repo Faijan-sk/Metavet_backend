@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Dto.ServiceProviderRequestDto;
 import com.example.demo.Entities.UsersEntity;
+import com.example.demo.Repository.UserRepo;
 import com.example.demo.Service.UserService;
 
 @RestController
@@ -31,6 +33,9 @@ public class CommonController {
 	
 	@Autowired
 	private UserService userService;
+	
+	@Autowired
+	private UserRepo userRepository;
 	
 	
 	
@@ -100,6 +105,50 @@ public class CommonController {
 	    // 🔁 Service response return karo
 	    return userService.deleteClientByUid(uuid);
 	}
+	
+	@PutMapping("/softDelete/{uid}")
+	public ResponseEntity<?> softDeleteClient(@PathVariable String uid) {
+
+	    UUID uuid;
+	    try {
+	        uuid = UUID.fromString(uid);
+	    } catch (IllegalArgumentException e) {
+	        return ResponseEntity
+	                .badRequest()
+	                .body(ApiResponse.error(
+	                        "Invalid UUID format",
+	                        400,
+	                        "BAD_REQUEST"
+	                ));
+	    }
+
+	    Optional<UsersEntity> userOpt = userRepository.findByUid(uuid);
+
+	    // ❌ User not found
+	    if (userOpt.isEmpty()) {
+	        return ResponseEntity
+	                .status(HttpStatus.NOT_FOUND)
+	                .body(ApiResponse.error(
+	                        "User not found",
+	                        404,
+	                        "NOT_FOUND"
+	                ));
+	    }
+
+	    // ✅ Soft delete
+	    UsersEntity user = userOpt.get();
+	    user.setDeleted(true);
+	    userRepository.save(user);
+
+	    return ResponseEntity.ok(
+	            ApiResponse.success(
+	                    "User soft deleted successfully",
+	                    user
+	            )
+	    );
+	}
+
+	
 
 	
 

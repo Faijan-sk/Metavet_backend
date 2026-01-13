@@ -82,7 +82,7 @@ public class AppointmentController {
      *
      * Request Body example:
      * {
-     *   "petId": 1,
+     *   "petId": 1,              // Required for userType=1 (client), Optional for userType=2 (doctor)
      *   "doctorId": 5,
      *   "doctorDayId": 5,
      *   "slotId": 24,
@@ -109,33 +109,56 @@ public class AppointmentController {
                         .body(Map.of("error", "Authenticated user has invalid id"));
             }
 
-            // Optional: ensure this user is client (userType == 1)
-            if (!isClient(currentUser)) {
-                logger.info("User {} attempted booking but is not a client. userType={}", userId, currentUser.getUserType());
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only clients can book appointments"));
-            }
-
-            // 2) Extract other required fields from request body
-            if (request.get("petId") == null || request.get("doctorId") == null
-                    || request.get("doctorDayId") == null || request.get("slotId") == null
-                    || request.get("appointmentDate") == null) {
+            // 2) Check required fields (except petId - it depends on userType)
+            if (request.get("doctorId") == null
+                    || request.get("doctorDayId") == null 
+                    || request.get("slotId") == null
+                    || request.get("appointmentDate") == null ) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Missing required fields. Required: petId, doctorId, doctorDayId, slotId, appointmentDate"));
+                        .body(Map.of("error", "Missing required fields. Required: doctorId, doctorDayId, slotId, appointmentDate"));
             }
 
-            Long petId = Long.parseLong(request.get("petId").toString());
+            // 3) Extract petId (can be null)
+            Long petId = (request.get("petId") != null) 
+                    ? Long.parseLong(request.get("petId").toString()) 
+                    : null;
+
+            // 4) ✅ FIXED LOGIC: Check petId requirement based on userType
+            int userType = getUserTypeAsInt(currentUser);
+            
+            if (userType == 1) {
+                // userType = 1 (Client) -> petId is MANDATORY
+                if (petId == null) {
+                    logger.warn("Client (userType=1) attempted to book without petId");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("error", "Pet selection is required for clients. Please select a pet."));
+                }
+            } else if (userType == 2) {
+                // userType = 2 (Doctor) -> petId is OPTIONAL
+                logger.debug("Doctor (userType=2) booking appointment. PetId: {}", petId);
+            } else {
+                // Unknown userType
+                logger.warn("User with unknown userType {} attempted to book appointment", userType);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Invalid user type for booking appointments"));
+            }
+
+            // 5) Extract other required fields
             Long doctorId = Long.parseLong(request.get("doctorId").toString());
             Long doctorDayId = Long.parseLong(request.get("doctorDayId").toString());
             Long slotId = Long.parseLong(request.get("slotId").toString());
             LocalDate appointmentDate = LocalDate.parse(request.get("appointmentDate").toString());
 
-            // 3) Call service with extracted userId (DB Long id)
+            // 6) Call service with extracted userId and optional petId
             Appointment appointment = appointmentService.bookAppointment(
                     userId, petId, doctorId, doctorDayId, slotId, appointmentDate
             );
 
+            logger.info("Appointment booked successfully - User: {}, UserType: {}, Pet: {}, Doctor: {}, Date: {}", 
+                    userId, userType, petId, doctorId, appointmentDate);
+
             return ResponseEntity.status(HttpStatus.CREATED).body(appointment);
+            
         } catch (RuntimeException ex) {
             logger.warn("bookAppointment runtime error: {}", ex.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -146,6 +169,159 @@ public class AppointmentController {
                     .body(Map.of("error", "Unexpected error: " + ex.getMessage()));
         }
     }
+    
+    
+
+
+    /**
+     * ✅ OFFLINE APPOINTMENT BOOKING
+     * POST /api/appointments/book-offline
+     * 
+     * Required fields:
+     * - userId (must have userType = 2)
+     * - doctorId
+     * - doctorDayId
+     * - slotId
+     * - appointmentDate
+     * 
+     * Optional field:
+     * - petId (can be null for walk-in customers)
+     */
+   @PostMapping("/book-offline-simple")
+public ResponseEntity<?> bookOfflineAppointmentSimple(
+        @RequestBody Map<String, Object> request
+) {
+    try {
+        // 1️⃣ Get logged-in user from Spring Security context
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+        if (currentUserOpt.isEmpty()) {
+            logger.warn("Unauthenticated attempt to book offline appointment");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+        }
+        
+        UsersEntity currentUser = currentUserOpt.get();
+        Long loggedInUserId = currentUser.getId();
+        
+        if (loggedInUserId == null) {
+            logger.warn("Authenticated user has null database id");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Authenticated user has invalid id"));
+        }
+        
+        // 2️⃣ Verify logged-in user is a doctor (userType = 2)
+        int userType = getUserTypeAsInt(currentUser);
+        if (userType != 2) {
+            logger.warn("Non-doctor user {} attempted to book offline appointment", loggedInUserId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Only doctors can book offline appointments"));
+        }
+        
+        // 3️⃣ Validate required fields
+        if (request.get("doctorId") == null
+                || request.get("doctorDayId") == null 
+                || request.get("slotId") == null
+                || request.get("appointmentDate") == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Missing required fields: doctorId, doctorDayId, slotId, appointmentDate"));
+        }
+        
+        // 4️⃣ Extract booking details
+        Long doctorId = Long.parseLong(request.get("doctorId").toString());
+        Long doctorDayId = Long.parseLong(request.get("doctorDayId").toString());
+        Long slotId = Long.parseLong(request.get("slotId").toString());
+        LocalDate appointmentDate = LocalDate.parse(request.get("appointmentDate").toString());
+        
+        // 5️⃣ Book offline appointment (userId = logged-in doctor, petId = null)
+        Appointment appointment = appointmentService.bookOfflineAppointmentSimple(
+                loggedInUserId, // Logged-in doctor ki ID
+                doctorId,
+                doctorDayId,
+                slotId,
+                appointmentDate
+        );
+        
+        logger.info("Offline appointment booked by doctor {} for doctor {} on {}", 
+                loggedInUserId, doctorId, appointmentDate);
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(appointment);
+        
+    } catch (RuntimeException ex) {
+        logger.warn("bookOfflineAppointmentSimple error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", ex.getMessage()));
+    } catch (Exception ex) {
+        logger.error("bookOfflineAppointmentSimple unexpected error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Unexpected error: " + ex.getMessage()));
+    }
+}
+    /**
+     * ✅ ALTERNATIVE: Request Body approach (better for complex data)
+     */
+    @PostMapping("/book-offline-v2")
+    public ResponseEntity<?> bookOfflineAppointmentV2(
+            @RequestBody OfflineBookingRequest request
+    ) {
+        try {
+            LocalDate date = LocalDate.parse(request.getAppointmentDate());
+            
+            Appointment appointment = appointmentService.bookOfflineAppointment(
+                request.getUserId(),
+                request.getDoctorId(),
+                request.getDoctorDayId(),
+                request.getSlotId(),
+                date,
+                request.getPetId()  // Can be null
+            );
+            
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(appointment);
+                    
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Server error: " + e.getMessage());
+        }
+    }
+    
+    // DTO Class for Request Body
+    public static class OfflineBookingRequest {
+        private Long userId;
+        private Long doctorId;
+        private Long doctorDayId;
+        private Long slotId;
+        private String appointmentDate;
+        private Long petId;  // Optional
+        
+        // Getters and Setters
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+        
+        public Long getDoctorId() { return doctorId; }
+        public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
+        
+        public Long getDoctorDayId() { return doctorDayId; }
+        public void setDoctorDayId(Long doctorDayId) { this.doctorDayId = doctorDayId; }
+        
+        public Long getSlotId() { return slotId; }
+        public void setSlotId(Long slotId) { this.slotId = slotId; }
+        
+        public String getAppointmentDate() { return appointmentDate; }
+        public void setAppointmentDate(String appointmentDate) { 
+            this.appointmentDate = appointmentDate; 
+        }
+        
+        public Long getPetId() { return petId; }
+        public void setPetId(Long petId) { this.petId = petId; }
+    }
+    
+    
 
     /**
      * API 4: Get all appointments for a user
@@ -460,6 +636,46 @@ public class AppointmentController {
     // ----------------- Helper methods -----------------
 
     /**
+     * ✅ NEW HELPER: Get userType as integer
+     * Handles various userType representations (Integer, Long, String, etc.)
+     */
+    private int getUserTypeAsInt(UsersEntity user) {
+        if (user == null || user.getUserType() == null) {
+            return -1; // Unknown
+        }
+        
+        Object userType = user.getUserType();
+        
+        if (userType instanceof Integer) {
+            return ((Integer) userType).intValue();
+        }
+        if (userType instanceof Long) {
+            return ((Long) userType).intValue();
+        }
+        if (userType instanceof String) {
+            String s = ((String) userType).trim();
+            try {
+                return Integer.parseInt(s);
+            } catch (NumberFormatException e) {
+                // Handle string representations like "CLIENT" or "DOCTOR"
+                if (s.equalsIgnoreCase("client") || s.equalsIgnoreCase("user")) {
+                    return 1;
+                } else if (s.equalsIgnoreCase("doctor")) {
+                    return 2;
+                }
+                return -1;
+            }
+        }
+        
+        // Try toString() as last resort
+        try {
+            return Integer.parseInt(userType.toString());
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    /**
      * ✅ IMPROVED: Null-safe check if the user is a doctor.
      * Assumes doctor can be represented by:
      *  - numeric value 2 (Integer/Long) OR
@@ -565,4 +781,22 @@ public class AppointmentController {
             return false;
         }
     }
+    
+    
+   
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 }

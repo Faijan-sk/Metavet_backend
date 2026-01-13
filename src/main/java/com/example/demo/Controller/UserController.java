@@ -68,6 +68,7 @@ public class UserController {
             // Success response with OTP and Token
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
+            response.put("userType", '0');
             response.put("message", "User Created Successfully " );
             response.put("data", savedUser );
             

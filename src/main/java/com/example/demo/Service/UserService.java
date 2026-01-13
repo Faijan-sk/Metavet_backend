@@ -47,9 +47,15 @@ public class UserService {
 public UserResponseDto registerUser(UserRequestDto request) {
 
     // --- Validations ---
+	   	Optional<UsersEntity> existedUser = userRepository.findByEmail(request.getEmail());
+	   
     if (userRepository.existsByEmail(request.getEmail())) {
         throw new RuntimeException("Email already exists");
     }
+    
+    
+    
+  
 
     if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
         throw new RuntimeException("Phone number already exists");

@@ -81,6 +81,14 @@ public class UsersEntity extends BaseEntity implements UserDetails {
     
     @Column(name = "is_profile_completed", nullable = false)
     private boolean isProfileCompleted = false;
+    
+    
+    @Column(
+    	    name = "is_profile_deleted",
+    	    nullable = false,
+    	    columnDefinition = "boolean default false"
+    	)
+    	private boolean isDeleted = false;
 
     // ============ USER ROLE RELATIONSHIP ============
  
@@ -222,5 +230,14 @@ public class UsersEntity extends BaseEntity implements UserDetails {
         this.isProfileCompleted = isProfileCompleted;
     }
 
+	public boolean isDeleted() {
+		return isDeleted;
+	}
+
+	public void setDeleted(boolean isDeleted) {
+		this.isDeleted = isDeleted;
+	}
+
+    
     
 }

@@ -2,6 +2,7 @@ package com.example.demo.Controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,10 +10,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.DoctorDayRequest;
+import com.example.demo.Dto.SlotResponseDtoForDoctor;
 import com.example.demo.Entities.DoctorDays;
 import com.example.demo.Entities.DoctorSlots;
 import com.example.demo.Entities.DoctorsEntity;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Enum.DayOfWeek;
 import com.example.demo.Service.DoctorDaysService;
 import com.example.demo.Service.DoctorService;
@@ -25,6 +29,11 @@ public class DoctorDaysController {
 
     @Autowired
     private DoctorService doctorService;
+    
+    
+    @Autowired
+    private SpringSecurityAuditorAware auditorAware;
+
 
     /**
      * Endpoint unchanged: POST /api/doctor-days/doctor/{userUid}/days
@@ -174,4 +183,104 @@ public class DoctorDaysController {
                     .body(Map.of("error", ex.getMessage()));
         }
     }
+    
+    
+    
+    /*
+     * yaha mai doctor extract kar raha hu access token se or user uske available day return kar raha hu
+     * 
+     */ 
+   @GetMapping("/getSelfDays")
+public ResponseEntity<?> getDoctorDaysSelf() {
+    try {
+
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+
+        Map<String, Object> result =
+                doctorDaysService.getDoctorAvailableDays(
+                        currentUserOpt.get().getUid()
+                );
+
+        List<?> days = (List<?>) result.get("days");
+
+        if (days.isEmpty()) {
+            return ResponseEntity.ok(
+                    Map.of(
+                            "status", false,
+                            "message", "Doctor has not configured availability days yet",
+                            "doctorId", result.get("doctorId"),
+                            "days", List.of()
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "status", true,
+                        "message", "Doctor available days fetched successfully",
+                        "doctorId", result.get("doctorId"),
+                        "days", result.get("days")
+                )
+        );
+
+    } catch (RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(
+                        Map.of(
+                                "status", false,
+                                "message", ex.getMessage()
+                        )
+                );
+    }
+}
+
+
+    
+    
+   @GetMapping("/getSelfAvailableSlots")
+public ResponseEntity<?> getDoctorAvailableSlots(@RequestParam String date) {
+    try {
+        // Get current doctor from access token
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+        
+        if (currentUserOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "status", false,
+                            "message", "User not authenticated"
+                    ));
+        }
+        
+        // Get available slots for the date
+        List<SlotResponseDtoForDoctor> availableSlots = doctorDaysService.getAvailableSlotsForDate(
+                currentUserOpt.get().getUid(),
+                date
+        );
+        
+        if (availableSlots.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                    "status", true,
+                    "message", "No available slots found for the given date",
+                    "date", date,
+                    "slots", List.of()
+            ));
+        }
+        
+        return ResponseEntity.ok(Map.of(
+                "status", true,
+                "message", "Available slots fetched successfully",
+                "date", date,
+                "totalSlots", availableSlots.size(),
+                "slots", availableSlots
+        ));
+        
+    } catch (RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "status", false,
+                        "message", ex.getMessage()
+                ));
+    }
+}
+    
 }

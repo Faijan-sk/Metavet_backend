@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Service.LoginAuthService;
 
 @RestController
@@ -16,37 +17,25 @@ public class LoginAuthController {
     private LoginAuthService loginService;
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> verifyNumber(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> verifyNumber(
+            @RequestBody Map<String, String> request) {
         try {
+
             String phoneNumber = request.get("phone_number");
 
-            if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "status", "failed",
-                    "message", "Phone number is required"
-                ));
-            }
+            ApiResponse<Map<String, Object>> response =
+                    loginService.checkUser(phoneNumber);
 
-            // Call service method to check user and generate OTP + token
-            Map<String, Object> response = loginService.checkUser(phoneNumber);
-
-            // If user not found
-            if (response == null || "failed".equalsIgnoreCase((String) response.get("status"))) {
-                return ResponseEntity.status(404).body(Map.of(
-                    "status", "failed",
-                    "message", "User not found"
-                ));
-            }
-
-            // Return success response
-            return ResponseEntity.ok(response);
+            return ResponseEntity
+                    .status(response.getStatusCode() != null
+                            ? response.getStatusCode()
+                            : 200)
+                    .body(response);
 
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of(
-                "status", "failed",
-                "message", "Internal server error",
-                "error", e.getMessage()
-            ));
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.serverError("Internal server error")
+            );
         }
     }
 }

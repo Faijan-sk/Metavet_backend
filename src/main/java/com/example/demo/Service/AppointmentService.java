@@ -3,12 +3,15 @@ package com.example.demo.Service;
 import com.example.demo.Entities.Appointment;
 import com.example.demo.Entities.DoctorSlots;
 import com.example.demo.Entities.DoctorsEntity;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Enum.AppointmentStatus;
 import com.example.demo.Enum.DayOfWeek;
 import com.example.demo.Repository.AppointmentRepo;
 import com.example.demo.Repository.DoctorDaysRepo;
 import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Repository.DoctorSlotRepo;
+import com.example.demo.Repository.UserRepo;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,10 @@ import java.util.stream.Collectors;
 
 @Service
 public class AppointmentService {
+	
+	@Autowired
+	private UserRepo userRepository;
+	
 
     @Autowired
     private AppointmentRepo appointmentRepository;
@@ -105,6 +112,165 @@ public class AppointmentService {
 
         return appointmentRepository.save(appointment);
     }
+    
+    
+    
+    /**
+     * ✅ OFFLINE APPOINTMENT BOOKING (OLD VERSION - WITH PETID)
+     * Kept for backward compatibility
+     */
+    @Transactional
+    public Appointment bookOfflineAppointment(Long loggedInUserId, Long doctorId,
+                                       Long doctorDayId, Long slotId, 
+                                       LocalDate appointmentDate, Long petId) {
+        
+        // 1️⃣ Validate logged-in user exists and has correct userType
+        UsersEntity loggedInUser = userRepository.findById(loggedInUserId)
+            .orElseThrow(() -> new RuntimeException("User not found with id: " + loggedInUserId));
+        
+        if (loggedInUser.getUserType() != 2) {
+            throw new RuntimeException("Only Doctors/Admins (userType=2) can book offline appointments");
+        }
+        
+        // 2️⃣ Validate other required fields (petId is optional)
+        validateOfflineBookingRequest(loggedInUserId, doctorId, doctorDayId, slotId, appointmentDate);
+        
+        // 3️⃣ Check if slot is already booked
+        if (appointmentRepository.isSlotBooked(slotId, appointmentDate)) {
+            throw new RuntimeException("This slot is already booked for the selected date");
+        }
+        
+        // 4️⃣ Create appointment with logged-in user's ID and OPTIONAL petId
+        Appointment appointment = new Appointment(
+            loggedInUserId, petId, doctorId, doctorDayId, slotId, appointmentDate
+        );
+        
+        return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * ✅ NEW: SIMPLIFIED OFFLINE BOOKING
+     * - Uses logged-in doctor's userId automatically
+     * - NO petId (null for walk-in customers)
+     * - Simple parameters: doctorId, doctorDayId, slotId, appointmentDate
+     */
+    @Transactional
+    public Appointment bookOfflineAppointmentSimple(
+            Long loggedInUserId,  // Logged-in doctor ki ID
+            Long doctorId,
+            Long doctorDayId,
+            Long slotId,
+            LocalDate appointmentDate
+    ) {
+        // 1️⃣ Validate logged-in user exists and is a doctor
+        UsersEntity loggedInUser = userRepository.findById(loggedInUserId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + loggedInUserId));
+        
+        if (loggedInUser.getUserType() != 2) {
+            throw new RuntimeException("Only Doctors (userType=2) can book offline appointments");
+        }
+        
+        // 2️⃣ Validate booking details
+        validateOfflineBookingSimple(doctorId, doctorDayId, slotId, appointmentDate);
+        
+        // 3️⃣ Check if slot is already booked
+        if (appointmentRepository.isSlotBooked(slotId, appointmentDate)) {
+            throw new RuntimeException("This slot is already booked for the selected date");
+        }
+        
+        // 4️⃣ Create appointment with logged-in doctor's userId and NO petId
+        Appointment appointment = new Appointment(
+                loggedInUserId,  // userId = logged-in doctor
+                null,            // petId = null (walk-in customer)
+                doctorId,
+                doctorDayId,
+                slotId,
+                appointmentDate
+        );
+        
+        return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * ✅ VALIDATION FOR OFFLINE BOOKING (OLD VERSION)
+     * - Does NOT require petId
+     */
+    private void validateOfflineBookingRequest(Long userId, Long doctorId,
+                                        Long doctorDayId, Long slotId, 
+                                        LocalDate appointmentDate) {
+        if (userId == null) {
+            throw new RuntimeException("User ID cannot be null");
+        }
+        // ✅ petId is OPTIONAL for offline bookings - no validation needed
+        
+        if (doctorId == null) {
+            throw new RuntimeException("Doctor ID cannot be null");
+        }
+        if (doctorDayId == null) {
+            throw new RuntimeException("Doctor Day ID cannot be null");
+        }
+        if (slotId == null) {
+            throw new RuntimeException("Slot ID cannot be null");
+        }
+        if (appointmentDate == null) {
+            throw new RuntimeException("Appointment date cannot be null");
+        }
+        
+        // Validate date is not in the past
+        if (appointmentDate.isBefore(LocalDate.now())) {
+            throw new RuntimeException("Cannot book appointment for past dates");
+        }
+        
+        // Validate doctor exists
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new RuntimeException("Doctor not found with id: " + doctorId);
+        }
+        
+        // Validate slot exists
+        if (!doctorSlotRepository.existsById(slotId)) {
+            throw new RuntimeException("Slot not found with id: " + slotId);
+        }
+    }
+
+    /**
+     * ✅ VALIDATION FOR SIMPLIFIED OFFLINE BOOKING
+     * - Simpler validation for walk-in appointments
+     */
+    private void validateOfflineBookingSimple(
+            Long doctorId,
+            Long doctorDayId,
+            Long slotId,
+            LocalDate appointmentDate
+    ) {
+        if (doctorId == null) {
+            throw new RuntimeException("Doctor ID cannot be null");
+        }
+        if (doctorDayId == null) {
+            throw new RuntimeException("Doctor Day ID cannot be null");
+        }
+        if (slotId == null) {
+            throw new RuntimeException("Slot ID cannot be null");
+        }
+        if (appointmentDate == null) {
+            throw new RuntimeException("Appointment date cannot be null");
+        }
+        
+        // Validate date is not in the past
+        if (appointmentDate.isBefore(LocalDate.now())) {
+            throw new RuntimeException("Cannot book appointment for past dates");
+        }
+        
+        // Validate doctor exists
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new RuntimeException("Doctor not found with id: " + doctorId);
+        }
+        
+        // Validate slot exists
+        if (!doctorSlotRepository.existsById(slotId)) {
+            throw new RuntimeException("Slot not found with id: " + slotId);
+        }
+    }
+    
 
     /**
      * Get all appointments for a user
@@ -254,9 +420,9 @@ public class AppointmentService {
         if (userId == null) {
             throw new RuntimeException("User ID cannot be null");
         }
-        if (petId == null) {
-            throw new RuntimeException("Pet ID cannot be null");
-        }
+//        if (petId == null) {
+//            throw new RuntimeException("Pet ID cannot be null");
+//        }
         if (doctorId == null) {
             throw new RuntimeException("Doctor ID cannot be null");
         }
@@ -285,6 +451,8 @@ public class AppointmentService {
             throw new RuntimeException("Slot not found with id: " + slotId);
         }
     }
+    
+    
 
     public List<Appointment> getBookedAppointmentsByDoctorAndDate(Long doctorId, LocalDate date) {
         if (doctorId == null || date == null) {

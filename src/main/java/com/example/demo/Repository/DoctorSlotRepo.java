@@ -138,4 +138,14 @@ public interface DoctorSlotRepo extends JpaRepository<DoctorSlots, Long> {
     // Count total slots by doctor
     @Query("SELECT COUNT(s) FROM DoctorSlots s WHERE s.doctorId = :doctorId")
     Long countSlotsByDoctor(@Param("doctorId") Long doctorId);
+    
+ // Find slots by doctorId and day that are not booked
+    @Query("SELECT s FROM DoctorSlots s WHERE s.doctorId = :doctorId " +
+           "AND s.doctorDay.dayOfWeek = :day " +
+           "AND NOT EXISTS (SELECT 1 FROM Appointment a WHERE a.slotId = s.id) " +
+           "ORDER BY s.startTime ASC")
+    List<DoctorSlots> findAvailableSlotsByDoctorIdAndDay(@Param("doctorId") Long doctorId,
+                                                          @Param("day") DayOfWeek day);
+    
+    
 }

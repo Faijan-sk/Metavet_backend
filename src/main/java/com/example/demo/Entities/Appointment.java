@@ -25,7 +25,7 @@ public class Appointment extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "pet_id", nullable = false)
+    @Column(name = "pet_id", nullable = true)
     private Long petId;
 
     @Column(name = "doctor_id", nullable = false)

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Repository.UserRepo;
 
@@ -25,73 +26,67 @@ public class LoginAuthService {
      * Finds user by phone number, generates OTP & token, updates user record,
      * and returns response map.
      */
-    public Map<String, Object> checkUser(String phoneNumber) {
+    public ApiResponse<Map<String, Object>> checkUser(String phoneNumber) {
         try {
-            // Basic validation
+
+            // ===== 1. Validation =====
             if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("status", "failed");
-                response.put("message", "Phone number is required");
-                return response;
+                Map<String, String> errors = new HashMap<>();
+                errors.put("phone_number", "Phone number is required");
+                return ApiResponse.validationError("Validation failed", errors);
             }
 
-            // 1. Find user by phone number
-            Optional<UsersEntity> optionalUser = userRepository.findByPhoneNumber(phoneNumber);
+            // ===== 2. Find user =====
+            Optional<UsersEntity> optionalUser =
+                    userRepository.findByPhoneNumber(phoneNumber);
 
             if (optionalUser.isEmpty()) {
-                return null; // Controller will handle user not found
+                return ApiResponse.notFound("User not found");
             }
 
             UsersEntity user = optionalUser.get();
-            String countryCode = user.getCountryCode();
 
-            // 2. Generate raw OTP
+            // ===== 3. BLOCKED / DELETED USER CHECK =====
+            if (user.isDeleted()) {
+                return ApiResponse.error(
+                        "Your account is blocked. Please contact admin.",
+                        403,
+                        "ACCOUNT_BLOCKED"
+                );
+            }
+
+            // ===== 4. Generate OTP =====
             String rawOtp = generateOtp();
-
-            // 3. Encode OTP before saving
             String encodedOtp = passwordEncoder.encode(rawOtp);
 
-            // 4. Update user with new OTP and save
             user.setOtp(encodedOtp);
             userRepository.save(user);
 
-            // 5. Generate temporary Base64 token (for OTP verification)
+            // ===== 5. Generate Token =====
             String token = generateToken(phoneNumber);
 
-            // 6. Prepare success response
+            // ===== 6. Response =====
             Map<String, Object> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("message", "OTP generated successfully");
             response.put("phone_number", phoneNumber);
-           
-            response.put("otp", rawOtp); // Only for testing - remove in production
+            response.put("country_code", user.getCountryCode());
+            response.put("otp", rawOtp); // ❌ REMOVE IN PRODUCTION
             response.put("token", token);
-          
-           
-           
 
-            return response;
+            return ApiResponse.success("OTP generated successfully", response);
 
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "failed");
-            errorResponse.put("message", "Error while generating OTP");
-            errorResponse.put("error", e.getMessage());
-            return errorResponse;
+            e.printStackTrace();
+            return ApiResponse.serverError("Error while generating OTP");
         }
     }
 
-    /**
-     * Generate 4-digit OTP
-     */
+    // ===== Generate 4-digit OTP =====
     private String generateOtp() {
         int otp = 1000 + (int) (Math.random() * 9000);
         return String.valueOf(otp);
     }
 
-    /**
-     * Generate temporary token for OTP verification
-     */
+    // ===== Generate temporary token =====
     private String generateToken(String phoneNumber) {
         String rawData = phoneNumber + ":" + System.currentTimeMillis();
         return Base64.getEncoder().encodeToString(rawData.getBytes());

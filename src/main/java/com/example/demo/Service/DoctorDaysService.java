@@ -1,9 +1,11 @@
 package com.example.demo.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.Dto.DoctorDayRequest;
+import com.example.demo.Dto.DoctorDayResponseDto;
+import com.example.demo.Dto.SlotResponseDtoForDoctor;
 import com.example.demo.Entities.DoctorDays;
 import com.example.demo.Entities.DoctorSlots;
 import com.example.demo.Entities.DoctorsEntity;
@@ -103,6 +107,19 @@ public class DoctorDaysService {
         }
         return doctorDaysRepository.findByDoctor_Id(doctorId);
     }
+    
+    
+    public List<DoctorDays> getDoctorDaysFromDoctorUUID(UUID uid) {
+    	
+    	long doctorid= doctorRepository.findDoctorIdByUserUid(uid);
+    	
+        if (!doctorRepository.existsById(doctorid)) {
+            throw new RuntimeException("Doctor not found with id: " + uid);
+        }
+        return doctorDaysRepository.findByDoctor_Id(doctorid);
+    }
+    
+    
 
     public List<DoctorDays> getDoctorDaysByDay(DayOfWeek day) {
         if (day == null) {
@@ -203,4 +220,90 @@ public class DoctorDaysService {
             throw new RuntimeException("End time cannot be equal to start time for day: " + day);
         }
     }
+    
+    
+    
+    public Map<String, Object> getDoctorAvailableDays(UUID uid) {
+
+        long doctorId = doctorRepository.findDoctorIdByUserUid(uid);
+
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new RuntimeException("Doctor not found");
+        }
+
+        List<DoctorDays> days = doctorDaysRepository.findByDoctor_Id(doctorId);
+
+        List<DoctorDayResponseDto> responseDays = days.stream()
+                .map(d -> new DoctorDayResponseDto(
+                        d.getId(),        // doctorDayId
+                        d.getUid(),       // doctorDayUid (BaseEntity se)
+                        d.getDayOfWeek().name()
+                ))
+                .distinct()
+                .toList();
+
+        return Map.of(
+                "doctorId", doctorId,
+                "days", responseDays
+        );
+    }
+
+
+    
+    
+    public List<SlotResponseDtoForDoctor> getAvailableSlotsForDate(UUID doctorUserUid, String dateString) {
+        // Parse the date string
+        LocalDate requestedDate;
+        try {
+            requestedDate = LocalDate.parse(dateString); // Expects format: YYYY-MM-DD
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid date format. Expected format: YYYY-MM-DD");
+        }
+        
+        // Get day of week from date
+        DayOfWeek dayOfWeek = convertJavaDayToDayOfWeek(requestedDate.getDayOfWeek());
+        
+        // Get doctor ID from UUID
+        long doctorId = doctorRepository.findDoctorIdByUserUid(doctorUserUid);
+        
+        if (!doctorRepository.existsById(doctorId)) {
+            throw new RuntimeException("Doctor not found");
+        }
+        
+        // Check if doctor has availability on this day
+        List<DoctorDays> doctorDays = doctorDaysRepository.findByDoctor_IdAndDayOfWeek(doctorId, dayOfWeek);
+        
+        if (doctorDays.isEmpty()) {
+            throw new RuntimeException("Doctor is not available on " + dayOfWeek);
+        }
+        
+        // Get available slots (not booked)
+        List<DoctorSlots> availableSlots = doctorSlotsRepository.findAvailableSlotsByDoctorIdAndDay(doctorId, dayOfWeek);
+        
+        // Convert to DTO
+        return availableSlots.stream()
+                .map(slot -> new SlotResponseDtoForDoctor(
+                        slot.getId(),
+                        slot.getUid(),
+                        slot.getStartTime(),
+                        slot.getEndTime(),
+                        slot.getSlotIdForJson(),
+                        slot.getDoctorDayIdForJson()
+                ))
+                .collect(Collectors.toList());
+    }
+    
+    // Helper method to convert java.time.DayOfWeek to your custom DayOfWeek enum
+    private DayOfWeek convertJavaDayToDayOfWeek(java.time.DayOfWeek javaDayOfWeek) {
+        return switch (javaDayOfWeek) {
+            case MONDAY -> DayOfWeek.MONDAY;
+            case TUESDAY -> DayOfWeek.TUESDAY;
+            case WEDNESDAY -> DayOfWeek.WEDNESDAY;
+            case THURSDAY -> DayOfWeek.THURSDAY;
+            case FRIDAY -> DayOfWeek.FRIDAY;
+            case SATURDAY -> DayOfWeek.SATURDAY;
+            case SUNDAY -> DayOfWeek.SUNDAY;
+        };
+    }
+    
 }
