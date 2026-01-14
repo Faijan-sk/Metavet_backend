@@ -15,22 +15,35 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ Use setAllowedOriginPatterns instead of setAllowedOrigins for better flexibility
-        configuration.setAllowedOriginPatterns(Arrays.asList( "*"
-//            "http://localhost:*",              // All localhost ports
-//            "http://34.10.49.96*",             // GCP frontend - all ports
-//            "http://34.71.120.171*",           // GCP frontend - all ports
-//            "https://34.71.120.171*",          // GCP frontend HTTPS - all ports
-//            "http://34.170.68.167*",           // GCP frontend - all ports (FIXED)
-//            "https://34.170.68.167*",          // GCP frontend HTTPS - all ports
-//            "https://34.61.254.251*",          // GCP frontend HTTPS - all ports
-//            "http://35.206.66.49*"             // GCP frontend - all ports
+        // ✅ GCP deployment ke liye specific origins (port 8080 remove kiya)
+        configuration.setAllowedOrigins(Arrays.asList( 
+            "http://localhost:3000",           // Local React dev
+            "http://localhost:5173", 
+"http://localhost:5174",// Local Angular dev  
+            "http://34.10.49.96",            // GCP frontend (port 80) - MAIN b URL
+            "http://34.10.49.96:8080",
+            "http://34.10.49.96:8181",
+            "http://34.71.120.171:8282",
+            "http://34.71.120.171:8282",
+            "https://34.71.120.171:8282",
+            "http://34.170.68.167",
+            "https://34.170.68.167:8080",
+            "http://34.170.68.167:8080",
+            "http://34.170.68.167:8282",
+            "http://34.71.120.171",// GCP frontend (port 3000)
+            "https://34.61.254.251",           // GCP frontend HTTPS (port 443)
+            "https://34.61.254.251:3000"  ,
+            "https://34.61.254.251:3001",
+            "http://35.206.66.49:8282" 
         ));
+
+        
 
         // ✅ All HTTP methods allowed
         configuration.setAllowedMethods(Arrays.asList(
             "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
         ));
+        
 
         // ✅ All headers allowed
         configuration.setAllowedHeaders(Arrays.asList("*"));
