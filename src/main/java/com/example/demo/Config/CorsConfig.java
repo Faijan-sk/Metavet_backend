@@ -16,15 +16,15 @@ public class CorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // ✅ Use setAllowedOriginPatterns instead of setAllowedOrigins for better flexibility
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:*",              // All localhost ports
-            "http://34.10.49.96*",             // GCP frontend - all ports
-            "http://34.71.120.171*",           // GCP frontend - all ports
-            "https://34.71.120.171*",          // GCP frontend HTTPS - all ports
-            "http://34.170.68.167*",           // GCP frontend - all ports (FIXED)
-            "https://34.170.68.167*",          // GCP frontend HTTPS - all ports
-            "https://34.61.254.251*",          // GCP frontend HTTPS - all ports
-            "http://35.206.66.49*"             // GCP frontend - all ports
+        configuration.setAllowedOriginPatterns(Arrays.asList( "*"
+//            "http://localhost:*",              // All localhost ports
+//            "http://34.10.49.96*",             // GCP frontend - all ports
+//            "http://34.71.120.171*",           // GCP frontend - all ports
+//            "https://34.71.120.171*",          // GCP frontend HTTPS - all ports
+//            "http://34.170.68.167*",           // GCP frontend - all ports (FIXED)
+//            "https://34.170.68.167*",          // GCP frontend HTTPS - all ports
+//            "https://34.61.254.251*",          // GCP frontend HTTPS - all ports
+//            "http://35.206.66.49*"             // GCP frontend - all ports
         ));
 
         // ✅ All HTTP methods allowed
