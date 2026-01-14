@@ -40,21 +40,32 @@ public class DoctorDaysController {
      * Note: userUid is the User's UID (UUID) from BaseEntity (passed as path value).
      * We accept it as String and parse to UUID internally (no URL change).
      */
-    @PostMapping("/doctor/{userUid}/days")
-    public ResponseEntity<?> addDoctorDays(
-            @PathVariable("userUid") String userUid,
-            @RequestBody List<DoctorDayRequest> dayRequests) {
+    @PostMapping("/days")
+    public ResponseEntity<?> addDoctorDays( @RequestBody List<DoctorDayRequest> dayRequests) {
 
+    	
+    	
+    	Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+    	
+    	if(currentUserOpt.get() == null) {
+    	
+    		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Please Login"));
+    		
+    		
+    	}
+    	
+    	
         try {
-            if (userUid == null || userUid.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "User uid is required in path"));
-            }
+//            if (userUid == null || userUid.trim().isEmpty()) {
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//                        .body(Map.of("error", "User uid is required in path"));
+//            }
 
             // Parse userUid to UUID safely
             UUID parsedUid;
             try {
-                parsedUid = UUID.fromString(userUid.trim());
+                parsedUid = currentUserOpt.get().getUid();
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Invalid userUid format. Must be a UUID string."));
@@ -65,7 +76,7 @@ public class DoctorDaysController {
 
             if (doctorId == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Doctor profile not found for user uid: " + userUid));
+                        .body(Map.of("error", "Doctor profile not found for user uid: " ));
             }
 
             List<DoctorDays> createdDays = doctorDaysService.createDaysForDoctor(doctorId, dayRequests);
