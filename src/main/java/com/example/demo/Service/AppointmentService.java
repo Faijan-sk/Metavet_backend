@@ -115,10 +115,7 @@ public class AppointmentService {
     
     
     
-    /**
-     * ✅ OFFLINE APPOINTMENT BOOKING (OLD VERSION - WITH PETID)
-     * Kept for backward compatibility
-     */
+   
     @Transactional
     public Appointment bookOfflineAppointment(Long loggedInUserId, Long doctorId,
                                        Long doctorDayId, Long slotId, 

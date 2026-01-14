@@ -7,6 +7,7 @@ public class UserResponseDto {
 
     private String otp;
     private String token;
+    private int userType;
 
     public UserResponseDto() {}
 
@@ -30,6 +31,14 @@ public class UserResponseDto {
     public void setToken(String token) {
         this.token = token;
     }
+
+	public int getUserType() {
+		return userType;
+	}
+
+	public void setUserType(int userType) {
+		this.userType = userType;
+	}
 
 	
 	
