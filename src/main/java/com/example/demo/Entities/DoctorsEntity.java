@@ -160,6 +160,23 @@ public class DoctorsEntity extends BaseEntity {
     @JsonIgnore
     private List<DoctorDays> availableDays;
 
+ // Latitude: -90 to +90
+    @Pattern(
+      regexp = "^(-?(?:[0-8]?[0-9]|90)(?:\\.[0-9]+)?)$",
+      message = "Invalid latitude format"
+    )
+    @Column(name = "latitude")
+    private String latitude;
+
+    // Longitude: -180 to +180
+    @Pattern(
+      regexp = "^(-?(?:1[0-7][0-9]|[0-9]?[0-9]|180)(?:\\.[0-9]+)?)$",
+      message = "Invalid longitude format"
+    )
+    @Column(name = "longitude")
+    private String longitude;
+
+    
     public DoctorsEntity() {
     }
 
@@ -427,8 +444,26 @@ public class DoctorsEntity extends BaseEntity {
     public void setDoctorProfileStatus(DoctorProfileStatus doctorProfileStatus) {
         this.doctorProfileStatus = doctorProfileStatus;
     }
+    
+    
 
-    // Validate / default doctorProfileStatus before persist/update
+    public String getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(String latitude) {
+		this.latitude = latitude;
+	}
+
+	public String getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(String longitude) {
+		this.longitude = longitude;
+	}
+
+	// Validate / default doctorProfileStatus before persist/update
     @PrePersist
     @PreUpdate
     public void validateDoctorProfileStatus() {
@@ -449,7 +484,7 @@ public class DoctorsEntity extends BaseEntity {
                          LocalDate licenseExpiryDate, String qualification, String specialization, String previousWorkplace,
                          LocalDate joiningDate, LocalDate resignationDate,
                          EmploymentType employmentType, Boolean isActive, String createdBy,
-                         String updatedBy, String emergencyContactNumber) {
+                         String updatedBy, String emergencyContactNumber,String latitude, String longitude) {
         this.user = user;
         this.experienceYears = experienceYears;
         this.hospitalClinicName = hospitalClinicName;
@@ -477,5 +512,7 @@ public class DoctorsEntity extends BaseEntity {
         this.createdBy = createdBy;
         this.updatedBy = updatedBy;
         this.emergencyContactNumber = emergencyContactNumber;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 }

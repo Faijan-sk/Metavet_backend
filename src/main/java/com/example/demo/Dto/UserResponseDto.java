@@ -8,6 +8,7 @@ public class UserResponseDto {
     private String otp;
     private String token;
     private int userType;
+    private String phoneNumber;
 
     public UserResponseDto() {}
 
@@ -38,6 +39,14 @@ public class UserResponseDto {
 
 	public void setUserType(int userType) {
 		this.userType = userType;
+	}
+
+	public String getPhoneNumber() {
+		return phoneNumber;
+	}
+
+	public void setPhoneNumber(String phoneNumber) {
+		this.phoneNumber = phoneNumber;
 	}
 
 	

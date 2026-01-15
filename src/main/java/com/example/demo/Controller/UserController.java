@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.Service.ServiceProviderService;
@@ -130,6 +131,16 @@ public class UserController {
             response.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+    }
+    
+    @GetMapping("/byNumber")
+    public ResponseEntity<?> getUserByMobile(
+            @RequestParam("phoneNumber") String phoneNumber
+    ) {
+
+        UsersEntity user = userService.getUserByMobile(phoneNumber);
+
+        return ResponseEntity.ok(user);
     }
     
     

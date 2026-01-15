@@ -113,6 +113,7 @@ public UserResponseDto registerUser(UserRequestDto request) {
     responseDto.setOtp(rawOtp);
     responseDto.setToken(generateToken(request.getPhoneNumber()));
     responseDto.setUserType(savedUser.getUserType());
+    responseDto.setPhoneNumber(savedUser.getPhoneNumber());
     
 //    savedUser.setOtp(rawOtp);             
 //    savedUser.setToken(generateToken(request.getPhoneNumber()));
@@ -493,6 +494,14 @@ public UserResponseDto registerUser(UserRequestDto request) {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body("Client deleted successfully");
+    }
+    
+    
+    public UsersEntity getUserByMobile(String phoneNumber) {
+        return userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> 
+                    new RuntimeException("User not found with phone number: " + phoneNumber)
+                );
     }
     
     

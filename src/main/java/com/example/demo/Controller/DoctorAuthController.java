@@ -2,23 +2,28 @@ package com.example.demo.Controller;
 
 import com.example.demo.Entities.DoctorsEntity;
 import com.example.demo.Entities.UsersEntity;
+import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Repository.UserRepo;
 import com.example.demo.Service.DoctorService;
 import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Dto.CreateDoctorRequest;
 import com.example.demo.Dto.DoctorDtoForAdmin;
 import com.example.demo.Dto.DoctorDtoForClient;
+import com.example.demo.Dto.DoctorRequestDto;
 import com.example.demo.Enum.DoctorProfileStatus;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,12 +49,79 @@ public class DoctorAuthController {
 
     @Autowired
     private UserRepo userRepository;
+    
+    @Autowired
+    private DoctorRepo doctorRepository;
 
     public DoctorAuthController() {
         System.out.println("🔨 DoctorAuthController instance created!");
     }
 
+    
+    
+    @PostMapping("/create")
+    public ResponseEntity<Map<String, Object>> createDoctor(@Valid @RequestBody DoctorRequestDto requestDto) {
+        Map<String, Object> response = new HashMap();
+        
+        try {
+            DoctorsEntity createdDoctor = doctorService.createDoctor(requestDto);
+            
+            response.put("success", true);
+            response.put("message", "Doctor profile created successfully");
+            response.put("data", createdDoctor);
+            response.put("doctorId", createdDoctor.getDoctorId());
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            response.put("data", null);
+            
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "An error occurred while creating doctor profile");
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     /**
+     * 
      * Test endpoint to verify controller is working
      */
     @GetMapping("/doctors/test")
@@ -103,99 +175,102 @@ public class DoctorAuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+    
+//    @GetMapping("/doctors/available/{distance}")
+//    public ResponseEntity<Map<String, Object>> getAvailableDoctors( @PathVariable BigDecimal distance ) {
+//       
+//    		
+//    	if(distance != null) {
+//    			System.out.println("the distance is : " + distance);
+//    	}
+//
+//        try {
+//            Map<String, Object> response = new HashMap<>();
+//
+//            // Fetch entities (service method returns List<DoctorsEntity>)
+//            List<DoctorsEntity> entities = doctorService.getAvailableAndActive();
+//
+//            // Map to DTOs for client
+//            List<DoctorDtoForClient> doctors = entities.stream()
+//                    .map(this::mapToClientDto)
+//                    .collect(Collectors.toList());
+//
+//            response.put("success", true);
+//            response.put("data", doctors);
+//            response.put("count", doctors.size());
+//
+//            System.out.println("✅ Found " + doctors.size() + " available doctors");
+//            return ResponseEntity.ok(response);
+//
+//        } catch (Exception e) {
+//            System.out.println("❌ Error in getAvailableDoctors: " + e.getMessage());
+//            e.printStackTrace();
+//
+//            Map<String, Object> errorResponse = new HashMap<>();
+//            errorResponse.put("success", false);
+//            errorResponse.put("message", "Error fetching doctors: " + e.getMessage());
+//
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+//        }
+//    }
+//    
+    
+    
+  
+    
+    
+    @GetMapping("/doctors/byDistance")
+    public ResponseEntity<Map<String, Object>> getAvailableDoctors(
+            @RequestParam BigDecimal lat,
+            @RequestParam BigDecimal lng,
+            @RequestParam(required = false) BigDecimal distance
+    ) {
 
-    @PostMapping("/doctor/create")
-    public ResponseEntity<?> createDoctor(@Valid @RequestBody CreateDoctorRequest request, BindingResult bindingResult) {
-        
-        // Validation errors check
-        if (bindingResult.hasErrors()) {
-            Map<String, String> errors = new HashMap<>();
-            bindingResult.getFieldErrors().forEach(error -> 
-                errors.put(error.getField(), error.getDefaultMessage())
-            );
-            return ResponseEntity.badRequest()
-                .body(Map.of(
-                    "success", false,
-                    "message", "Validation failed",
-                    "errors", errors
-                ));
+        System.out.println("User Lat: " + lat + ", Lng: " + lng);
+        System.out.println("Distance: " + distance);
+
+        Map<String, Object> response = new HashMap<>();
+
+        List<DoctorsEntity> doctors;
+
+        if (distance == null) {
+            // 🔥 distance nahi aaya → sab doctors
+            doctors = doctorService.getAvailableAndActive();
+        } else {
+            // 🔥 distance aaya → distance ke andar wale
+            doctors = doctorService.getDoctorsWithinDistance(lat, lng, distance);
         }
 
-        try {
-            // Convert userId string to UUID
-            UUID userUid;
-            try {
-                userUid = UUID.fromString(request.getUserId());
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of(
-                        "success", false,
-                        "message", "Invalid userId format. Must be a valid UUID"
-                    ));
-            }
+        List<DoctorDtoForClient> doctorDtos = doctors.stream()
+                .map(this::mapToClientDto)
+                .collect(Collectors.toList());
 
-            // Find user
-            Optional<UsersEntity> userOpt = userRepository.findByUid(userUid);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of(
-                        "success", false,
-                        "message", "User not found with UID: " + userUid
-                    ));
-            }
+        response.put("success", true);
+        response.put("data", doctorDtos);
+        response.put("count", doctorDtos.size());
 
-            // Create doctor entity
-            DoctorsEntity doctor = new DoctorsEntity();
-            doctor.setUser(userOpt.get());
-            doctor.setExperienceYears(request.getExperienceYears());
-            doctor.setHospitalClinicName(request.getHospitalClinicName());
-            doctor.setHospitalClinicAddress(request.getHospitalClinicAddress());
-            doctor.setPincode(request.getPincode());
-            doctor.setAddress(request.getAddress());
-            doctor.setCountry(request.getCountry());
-            doctor.setCity(request.getCity());
-            doctor.setState(request.getState());
-            doctor.setBio(request.getBio());
-            doctor.setConsultationFee(request.getConsultationFee());
-            doctor.setGender(request.getGender());
-            doctor.setDateOfBirth(request.getDateOfBirth());
-            doctor.setLicenseNumber(request.getLicenseNumber());
-            doctor.setLicenseIssueDate(request.getLicenseIssueDate());
-            doctor.setLicenseExpiryDate(request.getLicenseExpiryDate());
-            doctor.setQualification(request.getQualification());
-            doctor.setSpecialization(request.getSpecialization());
-            doctor.setPreviousWorkplace(request.getPreviousWorkplace());
-            doctor.setJoiningDate(request.getJoiningDate());
-            doctor.setResignationDate(request.getResignationDate());
-            doctor.setEmploymentType(request.getEmploymentType());
-            doctor.setIsActive(request.getIsActive());
-            doctor.setEmergencyContactNumber(request.getEmergencyContactNumber());
-
-            // Save using service
-            DoctorsEntity savedDoctor = doctorService.createDoctorEnhanced(doctor);
-
-            return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of(
-                    "success", true,
-                    "message", "Doctor profile created successfully",
-                    "data", savedDoctor
-                ));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-                ));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "success", false,
-                    "message", "Failed to create doctor profile: " + e.getMessage()
-                ));
-        }
+        return ResponseEntity.ok(response);
     }
+
+    
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
 
     /**
      * Get all doctors for admin
@@ -304,7 +379,8 @@ public class DoctorAuthController {
         } catch (Exception ignored) {
             // ignore user mapping issues
         }
-
+        dto.setLatitude(doctor.getLatitude());
+        dto.setLongitude(doctor.getLongitude());
         dto.setDoctorId(doctor.getDoctorId());
         dto.setExperienceYears(doctor.getExperienceYears());
         dto.setAddress(doctor.getAddress());

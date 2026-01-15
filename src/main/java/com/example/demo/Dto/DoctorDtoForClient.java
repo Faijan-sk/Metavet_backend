@@ -4,6 +4,9 @@ import java.util.UUID;
 
 import com.example.demo.Enum.DoctorProfileStatus;
 
+import jakarta.persistence.Column;
+import jakarta.validation.constraints.Pattern;
+
 public class DoctorDtoForClient {
 
     /*
@@ -29,6 +32,25 @@ public class DoctorDtoForClient {
     private String qualification;
     private String specialization;
     private DoctorProfileStatus doctorProfileStatus;
+    
+    
+    //location wise 
+    @Pattern(
+    	      regexp = "^(-?(?:[0-8]?[0-9]|90)(?:\\.[0-9]+)?)$",
+    	      message = "Invalid latitude format"
+    	    )
+    	    @Column(name = "latitude")
+    	    private String latitude;
+
+    	    // Longitude: -180 to +180
+    	    @Pattern(
+    	      regexp = "^(-?(?:1[0-7][0-9]|[0-9]?[0-9]|180)(?:\\.[0-9]+)?)$",
+    	      message = "Invalid longitude format"
+    	    )
+    	    @Column(name = "longitude")
+    	    private String longitude;
+    
+    	
 
     // No-args constructor
     public DoctorDtoForClient() {
@@ -184,4 +206,22 @@ public class DoctorDtoForClient {
     public void setDoctorProfileStatus(DoctorProfileStatus doctorProfileStatus) {
         this.doctorProfileStatus = doctorProfileStatus;
     }
+
+	public String getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(String latitude) {
+		this.latitude = latitude;
+	}
+
+	public String getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(String longitude) {
+		this.longitude = longitude;
+	}
+    
+    
 }

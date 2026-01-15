@@ -2,6 +2,7 @@ package com.example.demo.Service;
 
 import com.example.demo.Dto.DoctorDtoForAdmin;
 import com.example.demo.Dto.DoctorDtoForClient;
+import com.example.demo.Dto.DoctorRequestDto;
 import com.example.demo.Entities.DoctorsEntity;
 import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Repository.DoctorRepo;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
@@ -40,6 +42,103 @@ public class DoctorService {
         this.userRepository = userRepository;
     }
 
+    
+    
+    
+    @Transactional
+    public DoctorsEntity createDoctor(DoctorRequestDto requestDto) {
+        // 1. Validate that user exists
+        UUID userUid = UUID.fromString(requestDto.getUserId());
+        UsersEntity user = userRepository.findByUid(userUid)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + requestDto.getUserId()));
+
+        // 2. Check if doctor profile already exists for this user
+        if (doctorRepository.existsByUser(user)) {
+            throw new RuntimeException("Doctor profile already exists for this user");
+        }
+
+        // 3. Check if license number is unique
+        if (doctorRepository.existsByLicenseNumber(requestDto.getLicenseNumber())) {
+            throw new RuntimeException("License number already exists: " + requestDto.getLicenseNumber());
+        }
+
+        // 4. Convert string enums to proper enum types
+        Gender gender = Gender.valueOf(requestDto.getGender().toUpperCase());
+        EmploymentType employmentType = EmploymentType.valueOf(requestDto.getEmploymentType().toUpperCase());
+
+        // 5. Create new DoctorsEntity
+        DoctorsEntity doctor = new DoctorsEntity(
+                user,
+                requestDto.getExperienceYears(),
+                requestDto.getHospitalClinicName(),
+                requestDto.getHospitalClinicAddress(),
+                requestDto.getPincode(),
+                requestDto.getAddress(),
+                requestDto.getCountry(),
+                requestDto.getCity(),
+                requestDto.getState(),
+                requestDto.getBio(),
+                requestDto.getConsultationFee(),
+                true, // isAvailable - default true
+                gender,
+                requestDto.getDateOfBirth(),
+                requestDto.getLicenseNumber(),
+                requestDto.getLicenseIssueDate(),
+                requestDto.getLicenseExpiryDate(),
+                requestDto.getQualification(),
+                requestDto.getSpecialization(),
+                requestDto.getPreviousWorkplace(),
+                requestDto.getJoiningDate(),
+                null, // resignationDate - null for new doctors
+                employmentType,
+                requestDto.getIsActive(),
+                user.getUid().toString(), // createdBy - using user's UUID
+                null, // updatedBy - null on creation
+                requestDto.getEmergencyContactNumber(),
+                requestDto.getLatitude(),
+                requestDto.getLongitude()
+        );
+
+        // 6. Set default profile status (will also be set in @PrePersist)
+        doctor.setDoctorProfileStatus(DoctorProfileStatus.PENDING);
+
+        // 7. Save and return
+        return doctorRepository.save(doctor);
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     // Helper for profile status
     private void validateAndSetProfileStatus(DoctorsEntity doctor, DoctorProfileStatus requestedStatus) {
         if (requestedStatus != null &&
@@ -546,4 +645,69 @@ public class DoctorService {
         if (uid == null) return null;
         return doctorRepository.findDoctorIdByUserUid(uid);
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    public List<DoctorsEntity> getDoctorsWithinDistance(
+            BigDecimal userLat,
+            BigDecimal userLng,
+            BigDecimal maxDistanceKm
+    ) {
+
+        List<DoctorsEntity> doctors =
+                doctorRepository.findByIsAvailableTrueAndIsActiveTrue();
+
+        return doctors.stream()
+                .filter(doctor -> {
+                    if (doctor.getLatitude() == null || doctor.getLongitude() == null)
+                        return false;
+
+                    double doctorLat = Double.parseDouble(doctor.getLatitude());
+                    double doctorLng = Double.parseDouble(doctor.getLongitude());
+
+                    double distance = calculateDistance(
+                            userLat.doubleValue(),
+                            userLng.doubleValue(),
+                            doctorLat,
+                            doctorLng
+                    );
+
+                    return distance <= maxDistanceKm.doubleValue();
+                })
+                .collect(Collectors.toList());
+    }
+    
+    private static final double EARTH_RADIUS_KM = 6371.0;
+
+    public double calculateDistance(
+            double lat1, double lon1,
+            double lat2, double lon2
+    ) {
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1))
+                * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return EARTH_RADIUS_KM * c;
+    }
+    
+    
+    
+    
 }
