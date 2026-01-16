@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.*;
 
 import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.DoctorDayRequest;
+import com.example.demo.Dto.DoctorDaysResponseDto;
 import com.example.demo.Dto.SlotResponseDtoForDoctor;
 import com.example.demo.Entities.DoctorDays;
 import com.example.demo.Entities.DoctorSlots;
 import com.example.demo.Entities.DoctorsEntity;
 import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Enum.DayOfWeek;
+import com.example.demo.Repository.UserRepo;
 import com.example.demo.Service.DoctorDaysService;
 import com.example.demo.Service.DoctorService;
 
@@ -30,6 +32,8 @@ public class DoctorDaysController {
     @Autowired
     private DoctorService doctorService;
     
+    @Autowired
+    private UserRepo userRepository;
     
     @Autowired
     private SpringSecurityAuditorAware auditorAware;
@@ -92,15 +96,50 @@ public class DoctorDaysController {
         }
     }
 
+//    @GetMapping("/doctor/{doctorId}")
+//    public ResponseEntity<?> getDoctorDays(@PathVariable long doctorId) {
+//        try {
+//        	
+//      
+//            List<DoctorDays> days = doctorDaysService.getDoctorDaysFromDoctor(doctorId);
+//            return ResponseEntity.ok(days);
+//        } catch (RuntimeException ex) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+//                    .body(Map.of("error", ex.getMessage()));
+//        }
+//    }
+    
     @GetMapping("/doctor/{doctorId}")
     public ResponseEntity<?> getDoctorDays(@PathVariable long doctorId) {
         try {
+
             List<DoctorDays> days = doctorDaysService.getDoctorDaysFromDoctor(doctorId);
-            return ResponseEntity.ok(days);
+
+            List<DoctorDaysResponseDto> response = days.stream()
+                    .map(this::mapToDto)
+                    .toList();
+
+            return ResponseEntity.ok(response);
+
         } catch (RuntimeException ex) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", ex.getMessage()));
         }
+    }
+    
+    
+    private DoctorDaysResponseDto mapToDto(DoctorDays day) {
+
+        DoctorDaysResponseDto dto = new DoctorDaysResponseDto();
+
+        dto.setDoctorDayId(day.getDoctorDayIdForJson());
+        dto.setDoctorDayUid(day.getUid());
+        dto.setDayOfWeek(day.getDayOfWeek());
+        dto.setStartTime(day.getStartTime());
+        dto.setEndTime(day.getEndTime());
+        dto.setSlotDurationMinutes(day.getSlotDurationMinutes());
+
+        return dto;
     }
 
     @GetMapping("/day/{day}/details")

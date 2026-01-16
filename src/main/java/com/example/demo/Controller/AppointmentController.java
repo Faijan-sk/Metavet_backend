@@ -1,7 +1,10 @@
 package com.example.demo.Controller;
 
 import com.example.demo.Config.SpringSecurityAuditorAware;
+import com.example.demo.Dto.DoctorDaysResponseDto;
+import com.example.demo.Dto.SlotResponseDto;
 import com.example.demo.Entities.Appointment;
+import com.example.demo.Entities.DoctorDays;
 import com.example.demo.Entities.DoctorsEntity;
 import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.DoctorSlots;
@@ -73,6 +76,9 @@ public class AppointmentController {
                     .body(Map.of("error", ex.getMessage()));
         }
     }
+    
+    
+    
 
     /**
      * ✅ API 3: Book an appointment
@@ -783,10 +789,48 @@ public ResponseEntity<?> bookOfflineAppointmentSimple(
     }
     
     
-   
+  
+    @GetMapping("/getSlot")
+    public ResponseEntity<?> getAvailableSlotsforDashboad(
+            @RequestParam Long doctorId,
+            @RequestParam Long doctorDayId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        try {
+            List<DoctorSlots> availableSlots = appointmentService.getAvailableSlots(doctorId, doctorDayId, date);
+            
+            List<SlotResponseDto> response = availableSlots.stream().map(this::mapToDto).toList();
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            logger.warn("getAvailableSlots error: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", ex.getMessage()));
+        }
     
+    }
     
+    private SlotResponseDto mapToDto(DoctorSlots slot) {
+
+        
+        SlotResponseDto dto = new SlotResponseDto();
+        
+        dto.setDay(slot.getDoctorDay().getDayOfWeek().toString());
+        dto.setDoctorDayId(slot.getDoctorId());
+        dto.setDoctorDayUid(slot.getDoctorDay().getUid());
+        dto.setEndTime(slot.getEndTime());
+        dto.setSlotId(slot.getSlotIdForJson());
+        dto.setSlotUid(slot.getUid());
+        dto.setStartTime(slot.getStartTime());
+        
+        
+
+        return dto;
+    }
+
+        
+        
     
+ 
     
     
     
