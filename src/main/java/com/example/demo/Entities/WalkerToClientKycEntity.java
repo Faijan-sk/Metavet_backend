@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "walker_to_client_kyc")
@@ -18,6 +19,14 @@ public class WalkerToClientKycEntity extends BaseEntity {
     // Store petUid for reference (optional, for debugging)
     @Column(length = 100)
     private String petUid;
+    
+ // Store userUid (extracted from access token)
+    @Column(length = 100)
+    @NotBlank(message = "User UID is required")
+    @Size(max = 100, message = "User UID must not exceed 100 characters")
+    private String userUid;
+    
+    
 
     // ==================== Status Field ====================
     
@@ -472,4 +481,14 @@ public class WalkerToClientKycEntity extends BaseEntity {
     public void setPetUid(String petUid) {
         this.petUid = petUid;
     }
+
+	public String getUserUid() {
+		return userUid;
+	}
+
+	public void setUserUid(String userUid) {
+		this.userUid = userUid;
+	}
+    
+    
 }

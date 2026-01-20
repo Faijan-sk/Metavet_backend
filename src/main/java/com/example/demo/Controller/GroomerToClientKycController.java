@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +21,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.GroomerToClientKycRequestDto;
 import com.example.demo.Entities.GroomerToClientKycEntity;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.GroomerToClientKycEntity.KycStatus;
 import com.example.demo.Service.GroomerToClientKycService;
 
@@ -36,6 +39,11 @@ public class GroomerToClientKycController {
 
     @Autowired
     private GroomerToClientKycService groomerKycService;
+    
+    @Autowired
+    private SpringSecurityAuditorAware auditorAware;
+    
+    
 
     // =========================================================
     // 01. Create new Groomer KYC
@@ -308,6 +316,71 @@ public class GroomerToClientKycController {
         }
     }
 
+    // =========================================================
+    // 06. Get kyc Status
+    // GET /api/groomer-kyc
+    // =========================================================
+    
+    @GetMapping("/get-status")
+public ResponseEntity<?> getOwnKycStatus() {
+    try {
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+        
+        if (!currentUserOpt.isPresent()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(buildErrorResponse(
+                            "UNAUTHORIZED",
+                            "Unauthorized Access",
+                            "User is not authenticated.",
+                            null,
+                            null));
+        }
+        
+        UsersEntity loggedInUser = currentUserOpt.get();
+        String userUid = loggedInUser.getUid().toString();
+        
+        // ✅ FIXED: Use userUid to find KYC instead of treating userUid as kycUid
+        Optional<GroomerToClientKycEntity> kycOpt =
+                groomerKycService.getGroomerKycByUserUid(userUid);
+        
+        if (!kycOpt.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(buildErrorResponse(
+                            "KYC_NOT_FOUND",
+                            "KYC Not Found",
+                            "No KYC record exists for the logged-in user.",
+                            "userUid",
+                            userUid));
+        }
+        
+        GroomerToClientKycEntity kyc = kycOpt.get();
+        
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("kycUid", kyc.getUid());
+        responseData.put("status", kyc.getStatus());
+        responseData.put("statusDescription", getStatusDescription(kyc.getStatus()));
+        responseData.put("updatedAt", kyc.getUpdatedAt());
+        
+        return ResponseEntity.ok(buildSuccessResponse(
+                "KYC_STATUS_FETCHED",
+                "KYC status retrieved successfully.",
+                responseData));
+        
+    } catch (Exception ex) {
+        logger.error("💥 Error fetching KYC status: ", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(buildErrorResponse(
+                        "INTERNAL_SERVER_ERROR",
+                        "Failed to Fetch Status",
+                        "Unable to fetch KYC status. Please try again later.",
+                        null,
+                        ex.getMessage()));
+    }
+}
+
+    
+    
+    
     // ==================== Helper Methods ====================
 
     private String extractAccessToken(String authHeader) {

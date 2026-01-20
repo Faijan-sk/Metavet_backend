@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.example.demo.Entities.GroomerToClientKycEntity;
 import com.example.demo.Entities.PetsEntity;
 import com.example.demo.Entities.WalkerToClientKycEntity;
 
@@ -113,4 +114,12 @@ public interface WalkerToClientKycRepo extends JpaRepository<WalkerToClientKycEn
     // Find by frequency
     @Query("SELECT w FROM WalkerToClientKycEntity w WHERE LOWER(w.frequency) = LOWER(:frequency)")
     List<WalkerToClientKycEntity> findByFrequency(@Param("frequency") String frequency);
+    
+    // Find KYC by userUid
+    Optional<WalkerToClientKycEntity> findFirstByUserUid(String userUid);
+    
+    
+    
+    
 }
+

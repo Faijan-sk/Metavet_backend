@@ -118,5 +118,11 @@ public interface GroomerToClientKycRepo extends JpaRepository<GroomerToClientKyc
     @Query("UPDATE GroomerToClientKycEntity g SET g.status = :status WHERE g.uid = :uid")
     int updateStatusByUid(@Param("uid") UUID uid, @Param("status") com.example.demo.Entities.GroomerToClientKycEntity.KycStatus status);
     
+ // Find KYC by userUid
+    Optional<GroomerToClientKycEntity> findFirstByUserUid(String userUid);
+    
+    
+    
+    
     
 }

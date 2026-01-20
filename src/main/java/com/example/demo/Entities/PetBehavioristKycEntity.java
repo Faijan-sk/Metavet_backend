@@ -15,6 +15,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "behaviorist_to_client_kyc")
@@ -23,6 +24,14 @@ public class PetBehavioristKycEntity extends BaseEntity {
     // Store petUid for reference (optional, for debugging)
     @Column(length = 100)
     private String petUid;
+    
+    
+    @Column(length = 100)
+    @NotBlank(message = "User UID is required")
+    @Size(max = 100, message = "User UID must not exceed 100 characters")
+    private String userUid;
+    
+    
 
     // ==================== Pet Reference ====================
 
@@ -677,6 +686,14 @@ public class PetBehavioristKycEntity extends BaseEntity {
 
 	public void setConsentAccuracy(Boolean consentAccuracy) {
 		this.consentAccuracy = consentAccuracy;
+	}
+
+	public String getUserUid() {
+		return userUid;
+	}
+
+	public void setUserUid(String userUid) {
+		this.userUid = userUid;
 	}
     
     

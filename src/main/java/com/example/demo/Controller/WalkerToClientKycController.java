@@ -22,7 +22,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.WalkerToClientKycRequestDto;
+import com.example.demo.Entities.PetBehavioristKycEntity;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.WalkerToClientKycEntity;
 import com.example.demo.Entities.WalkerToClientKycEntity.KycStatus;
 import com.example.demo.Service.WalkerToClientKycService;
@@ -38,6 +41,10 @@ public class WalkerToClientKycController {
 
     @Autowired
     private WalkerToClientKycService walkerKycService;
+    
+    @Autowired
+	 private SpringSecurityAuditorAware auditorAware;
+	    
 
     // =========================================================
     // 01. Create new Walker KYC
@@ -520,5 +527,73 @@ public class WalkerToClientKycController {
             default:
                 return "Unknown status";
         }
+        
     }
+    
+ // =========================================================
+    // 06. Get KYC Status for Logged-in User
+    // GET /api/behaviorist-kyc/get-status
+    // =========================================================
+
+    
+    @GetMapping("/get-status")
+    public ResponseEntity<?> getOwnKycStatus() {
+        try {
+            Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+            
+            if (!currentUserOpt.isPresent()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(buildErrorResponse(
+                                "UNAUTHORIZED",
+                                "Unauthorized Access",
+                                "User is not authenticated.",
+                                null,
+                                null));
+            }
+            
+            UsersEntity loggedInUser = currentUserOpt.get();
+            String userUid = loggedInUser.getUid().toString();
+            
+            // ✅ FIXED: Use userUid to find KYC instead of treating userUid as kycUid
+            Optional<WalkerToClientKycEntity> kycOpt =
+            		walkerKycService.getKycByUserUuid(userUid);
+            
+            if (!kycOpt.isPresent()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(buildErrorResponse(
+                                "KYC_NOT_FOUND",
+                                "KYC Not Found",
+                                "No KYC record exists for the logged-in user.",
+                                "userUid",
+                                userUid));
+            }
+            
+            WalkerToClientKycEntity kyc = kycOpt.get();
+            
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("kycUid", kyc.getUid());
+            responseData.put("status", kyc.getStatus());
+           
+            responseData.put("updatedAt", kyc.getUpdatedAt());
+            
+            return ResponseEntity.ok(buildSuccessResponse(
+                    "KYC_STATUS_FETCHED",
+                    "KYC status retrieved successfully.",
+                    responseData));
+            
+        } catch (Exception ex) {
+           
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(buildErrorResponse(
+                            "INTERNAL_SERVER_ERROR",
+                            "Failed to Fetch Status",
+                            "Unable to fetch KYC status. Please try again later.",
+                            null,
+                            ex.getMessage()));
+        }
+    }
+    
+    
+    
+    
 }

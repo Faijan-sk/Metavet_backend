@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.example.demo.Entities.GroomerToClientKycEntity;
 import com.example.demo.Entities.PetBehavioristKycEntity;
 import com.example.demo.Entities.PetBehavioristKycEntity.KycStatus;
 
@@ -27,6 +28,7 @@ public interface PetBehavioristKycRepo extends JpaRepository<PetBehavioristKycEn
     @Query("UPDATE PetBehavioristKycEntity p SET p.kycStatus = :status WHERE p.uid = :uid")
     int updateKycStatusByUid(@Param("uid") UUID uid, @Param("status") KycStatus status);
    
+    Optional<PetBehavioristKycEntity> findFirstByUserUid(String userUid);
     
     
     

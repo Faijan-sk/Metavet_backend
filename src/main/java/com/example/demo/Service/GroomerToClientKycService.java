@@ -585,4 +585,11 @@ public class GroomerToClientKycService {
 
         groomerKycRepo.deleteById(id);
     }
+    
+ // ==================== Get KYC by User UID ====================
+    public Optional<GroomerToClientKycEntity> getGroomerKycByUserUid(String userUid) {
+        return groomerKycRepo.findFirstByUserUid(userUid);
+    }
+    
+    
 }

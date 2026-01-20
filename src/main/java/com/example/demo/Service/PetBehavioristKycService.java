@@ -10,8 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.PetBehavioristKycRequestDto;
 import com.example.demo.Entities.PetsEntity;
+import com.example.demo.Entities.UsersEntity;
+import com.example.demo.Entities.GroomerToClientKycEntity;
 import com.example.demo.Entities.PetBehavioristKycEntity;
 import com.example.demo.Entities.PetBehavioristKycEntity.BehavioralChallenges;
 import com.example.demo.Entities.PetBehavioristKycEntity.AggressiveBehaviors;
@@ -30,6 +33,9 @@ public class PetBehavioristKycService {
 
     @Autowired
     private PetRepo petsRepo;
+    
+    @Autowired
+    private SpringSecurityAuditorAware auditorAware;
 
     // =====================================================
     // 01. CREATE KYC
@@ -153,8 +159,12 @@ public class PetBehavioristKycService {
 
         entity.setPet(pet);
         entity.setPetUid(dto.getPetUid());
-
+        
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+        String userUid = currentUserOpt.get().getUid().toString();
+        
         // Step 1
+        entity.setUserUid(userUid);
         entity.setBehavioralChallengesEnums(challengeEnums); // will set comma-separated string internally
         entity.setAggressionBiteDescription(dto.getAggressionBiteDescription());
         entity.setOtherBehaviorDescription(dto.getOtherBehaviorDescription());
@@ -353,4 +363,12 @@ public class PetBehavioristKycService {
                     + ". Allowed values are: " + allowed);
         }
     }
+    
+    
+    
+    public Optional<PetBehavioristKycEntity> getKycByUserUuid(String userUid) {
+        return behavioristKycRepo.findFirstByUserUid(userUid);
+    }
+    
+    
 }

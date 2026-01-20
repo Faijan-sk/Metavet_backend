@@ -8,8 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.WalkerToClientKycRequestDto;
+import com.example.demo.Entities.PetBehavioristKycEntity;
 import com.example.demo.Entities.PetsEntity;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.WalkerToClientKycEntity;
 import com.example.demo.Entities.WalkerToClientKycEntity.EnergyLevel;
 import com.example.demo.Entities.WalkerToClientKycEntity.KycStatus;
@@ -28,12 +31,28 @@ public class WalkerToClientKycService {
 
     @Autowired
     private PetRepo petsRepo;
+    
+    @Autowired
+    private SpringSecurityAuditorAware auditorAware;
+    
+    
 
     // ==================== CREATE ====================
     @Transactional
     public WalkerToClientKycEntity createWalkerKyc(WalkerToClientKycRequestDto dto) throws ValidationException {
 
         WalkerToClientKycEntity kyc = new WalkerToClientKycEntity();
+        
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+
+     // Handle the Optional properly to avoid NoSuchElementException
+     if (currentUserOpt.isPresent()) {
+         UsersEntity loggedInUser = currentUserOpt.get();
+         kyc.setUserUid(loggedInUser.getUid().toString());
+     } else {
+         // Handle the case where no authenticated user is found
+         throw new ValidationException("USER_NOT_AUTHENTICATED: No authenticated user found. Please log in to create KYC records.");
+     }
 
         // ==================== Status Mapping (Optional) ====================
         if (dto.getStatus() != null && !dto.getStatus().trim().isEmpty()) {
@@ -460,4 +479,10 @@ public class WalkerToClientKycService {
                 return null;
         }
     }
+    
+    
+    public Optional<WalkerToClientKycEntity> getKycByUserUuid(String userUid) {
+        return walkerKycRepo.findFirstByUserUid(userUid);
+    }
+    
 }
