@@ -15,9 +15,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.WalkerKycRequestDto;
+import com.example.demo.Entities.ServiceProvider;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.WalkerKyc;
 import com.example.demo.Entities.WalkerKyc.ApplicationStatus;
+import com.example.demo.Repository.ServiceProviderRepo;
 import com.example.demo.Repository.WalkerKycRepo;
 
 import jakarta.validation.ValidationException;
@@ -25,13 +29,27 @@ import jakarta.validation.ValidationException;
 @Service
 public class WalkerKycService {
 
+//    private final Service.DoctorDaysService doctorDaysService;
+
     @Autowired
     private WalkerKycRepo walkerKycRepository;
+    
+	@Autowired
+    private SpringSecurityAuditorAware auditorAware;
+	
+	@Autowired
+	private ServiceProviderRepo serviceProviderRepository;
+    
+    
 
     private static final String DOCUMENT_ROOT = System.getProperty("user.dir");
     private static final String QrFolder = "walker_kyc";
     private static final String Qr_FILE_DIR = DOCUMENT_ROOT + File.separator + QrFolder + File.separator;
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("pdf", "jpeg", "jpg", "png", "doc", "docx");
+
+//    WalkerKycService(Service.DoctorDaysService doctorDaysService) {
+//        this.doctorDaysService = doctorDaysService;
+//    }
 
     // ===================== CREATE METHOD =====================
     public WalkerKycRequestDto createWalkerKyc(WalkerKycRequestDto dto, List<String> documentNames,
@@ -41,9 +59,22 @@ public class WalkerKycService {
         if (walkerKycRepository.existsByEmail(dto.getEmail())) {
             throw new ValidationException("Email already exists. Cannot create duplicate KYC application.");
         }
-
+        
+        UsersEntity owner = auditorAware.getCurrentAuditor().orElse(null);
+        
+        ServiceProvider serviceProvider = serviceProviderRepository.findByOwnerUid(owner.getUid());
+        if(serviceProvider.getServiceType() != ServiceProvider.ServiceType.Pet_Walker) {
+        	
+        	throw new ValidationException("Only Pet Walker can do this KYC ");
+        	
+        }
+        
         WalkerKyc kyc = new WalkerKyc();
-
+       
+        kyc.setUser(owner);
+      kyc.setServiceProvider(serviceProvider);
+        
+        
         // Required field validations
         if (dto.getFullLegalName() == null || dto.getFullLegalName().trim().isEmpty()) {
             throw new ValidationException("Full Legal Name is required.");
@@ -68,6 +99,13 @@ public class WalkerKycService {
         if (dto.getServiceArea() == null || dto.getServiceArea().trim().isEmpty()) {
             throw new ValidationException("Service Area is required.");
         }
+        
+        if(dto.getLatitude() == null || dto.getLongitude() ==null) {
+        	throw new ValidationException("Latitude and Longitude are required");
+        }
+        	kyc.setLatitude(dto.getLatitude());
+        	kyc.setLongitude(dto.getLongitude());
+        
         kyc.setServiceArea(dto.getServiceArea());
 
         // Optional business details

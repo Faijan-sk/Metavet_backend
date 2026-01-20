@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 //@Table(name = "metavet_to_groomer_kyc")
@@ -19,11 +20,11 @@ public class GroomerKyc extends BaseEntity {
 	@OneToOne
 	@JoinColumn(referencedColumnName = "uid", name = "service_provider_uid")
 	ServiceProvider serviceProvider;
-	
+
 	@OneToOne
 	@JoinColumn(referencedColumnName = "uid", name = "user_uid")
-	UsersEntity user ;
-	
+	UsersEntity user;
+
 	// Personal & Business Information
 	@Column(nullable = false)
 	private String fullLegalName;
@@ -46,12 +47,22 @@ public class GroomerKyc extends BaseEntity {
 	@Column(length = 500)
 	private String address;
 
+	@Pattern(regexp = "^(-?(?:[0-8]?[0-9]|90)(?:\\.[0-9]+)?)$", message = "Invalid latitude format")
+	@Column(name = "latitude")
+	private String latitude;
+
+	// Longitude: -180 to +180
+	@Pattern(regexp = "^(-?(?:1[0-7][0-9]|[0-9]?[0-9]|180)(?:\\.[0-9]+)?)$", message = "Invalid longitude format")
+	@Column(name = "longitude")
+	private String longitude;
+
 	@Enumerated(EnumType.STRING)
 	private ServiceLocationType serviceLocationType;
 
 	private Integer yearsExperience;
 
-	// ********************************************Personal Credential ****************************************
+	// ********************************************Personal Credential
+	// ****************************************
 
 	// Professional Credentials
 	private Boolean hasGroomingCert = false;
@@ -89,8 +100,6 @@ public class GroomerKyc extends BaseEntity {
 	private byte[] crimialRecordDoc;
 
 	private String criminalDocPath;
-	
-	
 
 //***************************************** Liability & Complience***********************************
 
@@ -425,8 +434,6 @@ public class GroomerKyc extends BaseEntity {
 		this.incidentPolicyDetails = incidentPolicyDetails;
 	}
 
-	
-
 	public String getLiabilityDocPath() {
 		return liabilityDocPath;
 	}
@@ -522,27 +529,20 @@ public class GroomerKyc extends BaseEntity {
 	public void setStatus(ApplicationStatus status) {
 		this.status = status;
 	}
-	
+
 	public enum ServiceOffered {
-	    FULL_GROOM("FULL_GROOM"),
-	    BATH_BRUSH("BATH_BRUSH"),
-	    NAIL_TRIM("NAIL_TRIM"),
-	    EAR_CLEANING("EAR_CLEANING"),
-	    DESHEDDING("DESHEDDING"),
-	    SPECIALTY_CUT("SPECIALTY_CUT"),
-	    OTHER("OTHER");
+		FULL_GROOM("FULL_GROOM"), BATH_BRUSH("BATH_BRUSH"), NAIL_TRIM("NAIL_TRIM"), EAR_CLEANING("EAR_CLEANING"),
+		DESHEDDING("DESHEDDING"), SPECIALTY_CUT("SPECIALTY_CUT"), OTHER("OTHER");
 
-	    private final String label;
+		private final String label;
 
-	    ServiceOffered(String label) {
-	        this.label = label;
-	    }
+		ServiceOffered(String label) {
+			this.label = label;
+		}
 
-	    
-	    
-	    public String getLabel() {
-	        return label;
-	    }
+		public String getLabel() {
+			return label;
+		}
 	}
 
 	public ServiceProvider getServiceProvider() {
@@ -560,7 +560,22 @@ public class GroomerKyc extends BaseEntity {
 	public void setUser(UsersEntity user) {
 		this.user = user;
 	}
-	
+
+	public String getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(String latitude) {
+		this.latitude = latitude;
+	}
+
+	public String getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(String longitude) {
+		this.longitude = longitude;
+	}
 	
 	
 

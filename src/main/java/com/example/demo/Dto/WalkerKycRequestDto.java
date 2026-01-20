@@ -26,6 +26,12 @@ public class WalkerKycRequestDto {
     private String email;
     private String phone;
     private String address;
+    
+private String latitude ;
+	
+	private String longitude;
+	
+	
     private String serviceArea;
     private Integer yearsExperience;
     
@@ -466,4 +472,22 @@ public class WalkerKycRequestDto {
     public void setStatus(ApplicationStatus status) {
         this.status = status;
     }
+
+	public String getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(String latitude) {
+		this.latitude = latitude;
+	}
+
+	public String getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(String longitude) {
+		this.longitude = longitude;
+	}
+    
+    
 }

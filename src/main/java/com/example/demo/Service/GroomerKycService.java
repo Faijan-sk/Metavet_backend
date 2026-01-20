@@ -43,6 +43,7 @@ public class GroomerKycService {
 	@Autowired
 	private ServiceProviderRepo serviceProviderRepository ;
 	
+	
 
 	private static final String DOCUMENT_ROOT = System.getProperty("user.dir");
 	private static final String QrFolder = "groomer_kyc";
@@ -69,6 +70,11 @@ public class GroomerKycService {
 		if (dto.getEmail() == null || dto.getEmail().trim().isEmpty()) {
 			throw new ValidationException("Email is required.");
 		}
+		
+		if(dto.getLongitude() == null || dto.getLatitude() == null ) {
+			throw new ValidationException("Location Lattitude Longitude required");
+		}
+	
 		kyc.setEmail(dto.getEmail());
 
 		// Optional business details
@@ -77,6 +83,11 @@ public class GroomerKycService {
 		kyc.setAddress(dto.getAddress());
 		kyc.setServiceLocationType(dto.getServiceLocationType());
 		kyc.setYearsExperience(dto.getYearsExperience());
+		kyc.setLatitude(dto.getLatitude());
+		kyc.setLongitude(dto.getLongitude());
+		
+		
+		
 
 		// Business License handling
 		if (dto.getHasBusinessLicense() != null && dto.getHasBusinessLicense().equals(Boolean.TRUE)) {

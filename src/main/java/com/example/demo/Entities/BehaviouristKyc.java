@@ -7,7 +7,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 public class BehaviouristKyc extends BaseEntity {
@@ -15,6 +18,16 @@ public class BehaviouristKyc extends BaseEntity {
     // ---------------- Personal & Business Information ----------------
     @Column(nullable = false)
     private String fullLegalName;
+    
+    @OneToOne
+	@JoinColumn(referencedColumnName = "uid", name = "user_uid")
+	UsersEntity user;
+
+	@OneToOne
+	@JoinColumn(referencedColumnName = "uid", name = "service_provider_uid")
+	ServiceProvider serviceProvider;
+	
+	
 
     private String businessName;
 
@@ -26,6 +39,16 @@ public class BehaviouristKyc extends BaseEntity {
 
     @Column(length = 500)
     private String address;
+    
+    @Pattern(regexp = "^(-?(?:[0-8]?[0-9]|90)(?:\\.[0-9]+)?)$", message = "Invalid latitude format")
+   	@Column(name = "latitude")
+   	private String latitude;
+
+   	// Longitude: -180 to +180
+   	@Pattern(regexp = "^(-?(?:1[0-7][0-9]|[0-9]?[0-9]|180)(?:\\.[0-9]+)?)$", message = "Invalid longitude format")
+   	@Column(name = "longitude")
+   	private String longitude;
+   	
 
     private String serviceArea;
 
@@ -463,4 +486,38 @@ public class BehaviouristKyc extends BaseEntity {
     public void setStatus(ApprovalStatus status) {
         this.status = status;
     }
+
+	public UsersEntity getUser() {
+		return user;
+	}
+
+	public void setUser(UsersEntity user) {
+		this.user = user;
+	}
+
+	public ServiceProvider getServiceProvider() {
+		return serviceProvider;
+	}
+
+	public void setServiceProvider(ServiceProvider serviceProvider) {
+		this.serviceProvider = serviceProvider;
+	}
+
+	public String getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(String latitude) {
+		this.latitude = latitude;
+	}
+
+	public String getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(String longitude) {
+		this.longitude = longitude;
+	}
+    
+    
 }

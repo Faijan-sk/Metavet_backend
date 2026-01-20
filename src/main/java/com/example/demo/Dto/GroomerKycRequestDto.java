@@ -43,6 +43,10 @@ public class GroomerKycRequestDto {
 	
 	private String address;
 	
+	private String latitude ;
+	
+	private String longitude;
+	
 	@Enumerated(EnumType.STRING)
 	private ServiceLocationType serviceLocationType;
 	
@@ -599,4 +603,24 @@ public class GroomerKycRequestDto {
 	public void setYearsExperience(Integer yearsExperience) {
 		this.yearsExperience = yearsExperience;
 	}
+
+
+
+	public String getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(String latitude) {
+		this.latitude = latitude;
+	}
+
+	public String getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(String longitude) {
+		this.longitude = longitude;
+	}
+
+	
 }

@@ -1,11 +1,24 @@
 package com.example.demo.Entities;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
+
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "metavet_to_walker_kyc")
 public class WalkerKyc extends BaseEntity {
+	
+	
+
+	@OneToOne
+	@JoinColumn(referencedColumnName = "uid", name = "user_uid")
+	UsersEntity user;
+
+	@OneToOne
+	@JoinColumn(referencedColumnName = "uid", name = "service_provider_uid")
+	ServiceProvider serviceProvider;
+	
     
     // Personal & Business Information
     @Column(name = "full_legal_name", nullable = false)
@@ -22,6 +35,17 @@ public class WalkerKyc extends BaseEntity {
     
     @Column(name = "address", nullable = false, length = 500)
     private String address;
+    
+    @Pattern(regexp = "^(-?(?:[0-8]?[0-9]|90)(?:\\.[0-9]+)?)$", message = "Invalid latitude format")
+	@Column(name = "latitude")
+	private String latitude;
+
+	// Longitude: -180 to +180
+	@Pattern(regexp = "^(-?(?:1[0-7][0-9]|[0-9]?[0-9]|180)(?:\\.[0-9]+)?)$", message = "Invalid longitude format")
+	@Column(name = "longitude")
+	private String longitude;
+
+	
     
     @Column(name = "service_area", nullable = false)
     private String serviceArea;
@@ -442,4 +466,38 @@ public class WalkerKyc extends BaseEntity {
     public void setStatus(ApplicationStatus status) {
         this.status = status;
     }
+
+	public String getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(String latitude) {
+		this.latitude = latitude;
+	}
+
+	public String getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(String longitude) {
+		this.longitude = longitude;
+	}
+
+	public UsersEntity getUser() {
+		return user;
+	}
+
+	public void setUser(UsersEntity user) {
+		this.user = user;
+	}
+
+	public ServiceProvider getServiceProvider() {
+		return serviceProvider;
+	}
+
+	public void setServiceProvider(ServiceProvider serviceProvider) {
+		this.serviceProvider = serviceProvider;
+	}
+    
+    
 }

@@ -15,12 +15,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.BehaviouristKycRequestDto;
 import com.example.demo.Entities.BehaviouristKyc;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.BehaviouristKyc.ApprovalStatus;
 import com.example.demo.Entities.BehaviouristKyc.ServiceOffered;
 import com.example.demo.Entities.BehaviouristKyc.Specialization;
+import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Repository.BehaviouristKycRepo;
+import com.example.demo.Repository.ServiceProviderRepo;
 
 import jakarta.validation.ValidationException;
 
@@ -29,6 +33,14 @@ public class BehaviouristKycService {
 
     @Autowired
     private BehaviouristKycRepo behaviouristKycRepo;
+    
+    @Autowired
+    private SpringSecurityAuditorAware auditorAware;
+	
+	@Autowired
+	private ServiceProviderRepo serviceProviderRepository;
+	
+	
 
     private static final String DOCUMENT_ROOT = System.getProperty("user.dir");
     private static final String QrFolder = "behaviourist_kyc";
@@ -44,7 +56,35 @@ public class BehaviouristKycService {
             throw new ValidationException("Email already exists. Cannot create duplicate KYC application.");
         }
 
+        
+        UsersEntity owner = auditorAware.getCurrentAuditor().orElse(null);
+        
+        
+        ServiceProvider serviceProvider = serviceProviderRepository.findByOwnerUid(owner.getUid());
+        
+        if(serviceProvider.getServiceType() != ServiceProvider.ServiceType.Pet_Behaviourist) {
+        	throw new ValidationException("Only Pet Behaviourist can submit this Kyc");
+        }
+        
+        
         BehaviouristKyc kyc = new BehaviouristKyc();
+        
+        
+        kyc.setUser(owner);
+        
+        kyc.setServiceProvider(serviceProvider);
+        
+        
+        
+        if(dto.getLatitude() == null || dto.getLongitude() == null ) {
+        	
+        	throw new ValidationException("Latitude and Longitude is required");
+        	
+        }
+        
+        kyc.setLatitude(dto.getLatitude());
+        kyc.setLongitude(dto.getLongitude());
+        
 
         // Required field validations
         if (dto.getFullLegalName() == null || dto.getFullLegalName().trim().isEmpty()) {
