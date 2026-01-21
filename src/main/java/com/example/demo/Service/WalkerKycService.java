@@ -1,5 +1,8 @@
 package com.example.demo.Service;
 
+import org.springframework.data.domain.Pageable;
+
+import org.springframework.data.domain.Page;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.Config.SpringSecurityAuditorAware;
+import com.example.demo.Dto.GetAllWalkerResponse;
 import com.example.demo.Dto.WalkerKycRequestDto;
 import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Entities.UsersEntity;
@@ -25,6 +29,8 @@ import com.example.demo.Repository.ServiceProviderRepo;
 import com.example.demo.Repository.WalkerKycRepo;
 
 import jakarta.validation.ValidationException;
+import org.springframework.data.domain.PageRequest;
+
 
 @Service
 public class WalkerKycService {
@@ -440,4 +446,100 @@ public class WalkerKycService {
 
         return filePath;
     }
+    
+    
+    
+    /**
+     * Get all walkers within specified distance with filters
+     * @param userLat User's latitude
+     * @param userLon User's longitude
+     * @param maxDistance Maximum distance in kilometers
+     * @param searchTerm Optional search term (name/business)
+     * @param serviceArea Optional service area filter
+     * @param page Page number (0-based)
+     * @param size Records per page
+     * @return Page of GetAllWalkerResponse
+     */
+    public Page<GetAllWalkerResponse> getAllWalkers(
+            Double userLat,
+            Double userLon,
+            Double maxDistance,
+            String searchTerm,
+            String serviceArea,
+            int page,
+            int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<WalkerKyc> walkerPage = walkerKycRepository.findWalkersWithinDistance(
+                userLat, userLon, maxDistance, searchTerm, serviceArea, pageable);
+
+        return walkerPage.map(walkerKyc -> mapToDto(walkerKyc, userLat, userLon));
+    }
+
+    /**
+     * Map WalkerKyc entity to GetAllWalkerResponse DTO
+     */
+    private GetAllWalkerResponse mapToDto(WalkerKyc kyc, Double userLat, Double userLon) {
+        GetAllWalkerResponse dto = new GetAllWalkerResponse();
+
+        // User fields
+        if (kyc.getUser() != null) {
+            dto.setUid(kyc.getUser().getUid().toString());
+            dto.setFullName(kyc.getUser().getFirstName() + " " + kyc.getUser().getLastName());
+            dto.setEmail(kyc.getUser().getEmail());
+            dto.setPhoneNumber(kyc.getUser().getFullPhoneNumber());
+        }
+
+        // Service Provider fields
+        if (kyc.getServiceProvider() != null && kyc.getServiceProvider().getServiceType() != null) {
+            dto.setServiceType(kyc.getServiceProvider().getServiceType().name());
+        }
+
+        // KYC fields
+    
+        dto.setAddress(kyc.getAddress());
+        dto.setServiceArea(kyc.getServiceArea());
+        dto.setYearsExperience(kyc.getYearsExperience());
+        dto.setWalkRadius(kyc.getWalkRadius());
+        dto.setMaxPetsPerWalk(kyc.getMaxPetsPerWalk());
+        
+        // Preferred communication
+        if (kyc.getPreferredCommunication() != null) {
+            dto.setPreferredCommunication(ALLOWED_EXTENSIONS);
+        }
+
+        // Calculate distance
+        if (kyc.getLatitude() != null && kyc.getLongitude() != null) {
+            double distance = calculateDistance(
+                userLat, userLon,
+                Double.parseDouble(kyc.getLatitude()),
+                Double.parseDouble(kyc.getLongitude())
+            );
+            dto.setDistanceKm(Math.round(distance * 100.0) / 100.0); // Round to 2 decimal places
+        }
+
+        return dto;
+    }
+
+    /**
+     * Calculate distance between two points using Haversine formula
+     * @return Distance in kilometers
+     */
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int EARTH_RADIUS = 6371; // Kilometers
+
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return EARTH_RADIUS * c;
+    }
+    
+    
 }

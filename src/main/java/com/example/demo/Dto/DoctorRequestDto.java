@@ -15,8 +15,7 @@ import jakarta.validation.constraints.Size;
 
 public class DoctorRequestDto {
 
-    @NotNull(message = "User ID is required")
-    private String userId;
+   
 
     @NotNull(message = "Experience is required")
     @Min(value = 0, message = "Experience cannot be negative")
@@ -115,14 +114,14 @@ public class DoctorRequestDto {
     public DoctorRequestDto() {
     }
 
-    public DoctorRequestDto(String userId, Integer experienceYears, String hospitalClinicName,
+    public DoctorRequestDto( Integer experienceYears, String hospitalClinicName,
                            String hospitalClinicAddress, String pincode, String address, String country,
                            String city, String state, String bio, Double consultationFee, String gender,
                            LocalDate dateOfBirth, String licenseNumber, LocalDate licenseIssueDate,
                            LocalDate licenseExpiryDate, String qualification, String specialization,
                            String previousWorkplace, LocalDate joiningDate, String employmentType,
                            Boolean isActive, String emergencyContactNumber, String latitude, String longitude) {
-        this.userId = userId;
+    
         this.experienceYears = experienceYears;
         this.hospitalClinicName = hospitalClinicName;
         this.hospitalClinicAddress = hospitalClinicAddress;
@@ -150,13 +149,7 @@ public class DoctorRequestDto {
     }
 
     // Getters and Setters
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
+    
 
     public Integer getExperienceYears() {
         return experienceYears;

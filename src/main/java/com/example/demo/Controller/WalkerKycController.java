@@ -1,5 +1,7 @@
 package com.example.demo.Controller;
 
+import org.springframework.data.domain.Page;
+
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -35,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.Dto.ApiResponse;
+import com.example.demo.Dto.GetAllWalkerResponse;
 import com.example.demo.Dto.WalkerKycRequestDto;
 import com.example.demo.Entities.WalkerKyc;
 import com.example.demo.Entities.WalkerKyc.ApplicationStatus;
@@ -43,6 +46,7 @@ import com.example.demo.Service.WalkerKycService;
 
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
+
 
 @RestController
 @RequestMapping("/walkerkyc")
@@ -522,4 +526,33 @@ public class WalkerKycController {
                     .body(ApiResponse.serverError("Failed to update application status."));
         }
     }
+    
+    
+    @GetMapping("/nearby")
+    public ResponseEntity<ApiResponse<Page<GetAllWalkerResponse>>> getNearbyWalkers(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(defaultValue = "10.0") Double maxDistance,
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) String serviceArea,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            logger.info("Fetching nearby walkers for location: {}, {}", latitude, longitude);
+            
+            Page<GetAllWalkerResponse> walkers = walkerKycService.getAllWalkers(
+                    latitude, longitude, maxDistance, searchTerm, serviceArea, page, size);
+
+            logger.info("Found {} walkers within {} km", walkers.getTotalElements(), maxDistance);
+            
+            return ResponseEntity.ok(ApiResponse.success("Walkers retrieved successfully", walkers));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching nearby walkers", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.serverError("Error: " + e.getMessage()));
+        }
+    }
+    
+    
 }

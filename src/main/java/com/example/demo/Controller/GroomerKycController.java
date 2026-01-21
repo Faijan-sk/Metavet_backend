@@ -545,7 +545,6 @@ public class GroomerKycController {
 			@RequestParam(required = false) String serviceType,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-
 		try {
 			Page<GetAllGroomerResponse> groomers = groomerKycService.getAllGroomers(
 					latitude, longitude, maxDistance, searchTerm, serviceType, page, size);

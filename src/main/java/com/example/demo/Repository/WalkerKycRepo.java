@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -38,4 +40,35 @@ public interface WalkerKycRepo extends JpaRepository<WalkerKyc, Long> {
     // Applications by status (ordered by creation date)
     @Query("SELECT w FROM WalkerKyc w WHERE w.status = :status ORDER BY w.createdAt DESC")
     List<WalkerKyc> findByStatusOrderByCreatedAtDesc(@Param("status") ApplicationStatus status);
+    
+    // ⭐ NEW: Distance-based query with filters
+    @Query(value = """
+        SELECT wk.* FROM metavet_to_walker_kyc wk
+        JOIN service_provider sp ON wk.service_provider_uid = sp.uid
+        JOIN users_entity u ON wk.user_uid = u.uid
+        WHERE wk.status = 'APPROVED'
+        AND u.is_profile_deleted = false
+        AND (6371 * acos(
+            cos(radians(:userLat)) * cos(radians(CAST(wk.latitude AS DOUBLE PRECISION))) *
+            cos(radians(CAST(wk.longitude AS DOUBLE PRECISION)) - radians(:userLon)) +
+            sin(radians(:userLat)) * sin(radians(CAST(wk.latitude AS DOUBLE PRECISION)))
+        )) <= :maxDistance
+        AND (:searchTerm IS NULL OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+            OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+            OR LOWER(wk.business_name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+        AND (:serviceArea IS NULL OR LOWER(wk.service_area) LIKE LOWER(CONCAT('%', :serviceArea, '%')))
+        ORDER BY (6371 * acos(
+            cos(radians(:userLat)) * cos(radians(CAST(wk.latitude AS DOUBLE PRECISION))) *
+            cos(radians(CAST(wk.longitude AS DOUBLE PRECISION)) - radians(:userLon)) +
+            sin(radians(:userLat)) * sin(radians(CAST(wk.latitude AS DOUBLE PRECISION)))
+        )) ASC
+        """, nativeQuery = true)
+    Page<WalkerKyc> findWalkersWithinDistance(
+        @Param("userLat") Double userLat,
+        @Param("userLon") Double userLon,
+        @Param("maxDistance") Double maxDistance,
+        @Param("searchTerm") String searchTerm,
+        @Param("serviceArea") String serviceArea,
+        Pageable pageable
+    );
 }

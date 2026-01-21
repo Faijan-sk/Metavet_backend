@@ -1,5 +1,6 @@
 package com.example.demo.Controller;
 
+import org.springframework.data.domain.Page;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -36,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.Dto.ApiResponse;
 import com.example.demo.Dto.BehaviouristKycRequestDto;
+import com.example.demo.Dto.GetAllBehaviouristResponse;
 import com.example.demo.Entities.BehaviouristKyc;
 import com.example.demo.Entities.BehaviouristKyc.ApprovalStatus;
 import com.example.demo.Repository.BehaviouristKycRepo;
@@ -536,4 +538,28 @@ public class BehaviouristKycController {
                     .body(ApiResponse.serverError("Failed to update application status."));
         }
     }
+    
+    @GetMapping("/nearby")
+    public ResponseEntity<ApiResponse<Page<GetAllBehaviouristResponse>>> getNearbyBehaviourists(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(defaultValue = "10.0") Double maxDistance,
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) String serviceType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            Page<GetAllBehaviouristResponse> behaviourists = behaviouristKycService.getAllBehaviourists(
+                    latitude, longitude, maxDistance, searchTerm, serviceType, page, size);
+
+            return ResponseEntity.ok(ApiResponse.success("Behaviourists retrieved successfully", behaviourists));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching nearby behaviourists", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.serverError("Error: " + e.getMessage()));
+        }
+    }
+    
+    
 }

@@ -1,5 +1,6 @@
 package com.example.demo.Service;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.DoctorDtoForAdmin;
 import com.example.demo.Dto.DoctorDtoForClient;
 import com.example.demo.Dto.DoctorRequestDto;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,18 +44,89 @@ public class DoctorService {
         this.userRepository = userRepository;
     }
 
+    @Autowired
+    private SpringSecurityAuditorAware auditorAware;
     
+    
+//    @Transactional
+//    public DoctorsEntity createDoctor(DoctorRequestDto requestDto) {
+//    	
+//    	
+//    	Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+//    	
+//    	
+//    	
+//        // 1. Validate that user exists
+//        UUID userUid = UUID.fromString(requestDto.getUserId());
+//        UsersEntity user = userRepository.findByUid(userUid)
+//                .orElseThrow(() -> new RuntimeException("User not found with ID: " + requestDto.getUserId()));
+//
+//        // 2. Check if doctor profile already exists for this user
+//        if (doctorRepository.existsByUser(user)) {
+//            throw new RuntimeException("Doctor profile already exists for this user");
+//        }
+//
+//        // 3. Check if license number is unique
+//        if (doctorRepository.existsByLicenseNumber(requestDto.getLicenseNumber())) {
+//            throw new RuntimeException("License number already exists: " + requestDto.getLicenseNumber());
+//        }
+//
+//        // 4. Convert string enums to proper enum types
+//        Gender gender = Gender.valueOf(requestDto.getGender().toUpperCase());
+//        EmploymentType employmentType = EmploymentType.valueOf(requestDto.getEmploymentType().toUpperCase());
+//
+//        // 5. Create new DoctorsEntity
+//        DoctorsEntity doctor = new DoctorsEntity(
+//                user,
+//                requestDto.getExperienceYears(),
+//                requestDto.getHospitalClinicName(),
+//                requestDto.getHospitalClinicAddress(),
+//                requestDto.getPincode(),
+//                requestDto.getAddress(),
+//                requestDto.getCountry(),
+//                requestDto.getCity(),
+//                requestDto.getState(),
+//                requestDto.getBio(),
+//                requestDto.getConsultationFee(),
+//                true, // isAvailable - default true
+//                gender,
+//                requestDto.getDateOfBirth(),
+//                requestDto.getLicenseNumber(),
+//                requestDto.getLicenseIssueDate(),
+//                requestDto.getLicenseExpiryDate(),
+//                requestDto.getQualification(),
+//                requestDto.getSpecialization(),
+//                requestDto.getPreviousWorkplace(),
+//                requestDto.getJoiningDate(),
+//                null, // resignationDate - null for new doctors
+//                employmentType,
+//                requestDto.getIsActive(),
+//                user.getUid().toString(), // createdBy - using user's UUID
+//                null, // updatedBy - null on creation
+//                requestDto.getEmergencyContactNumber(),
+//                requestDto.getLatitude(),
+//                requestDto.getLongitude()
+//        );
+//
+//        // 6. Set default profile status (will also be set in @PrePersist)
+//        doctor.setDoctorProfileStatus(DoctorProfileStatus.PENDING);
+//
+//        // 7. Save and return
+//        return doctorRepository.save(doctor);
+//    }
     
     
     @Transactional
     public DoctorsEntity createDoctor(DoctorRequestDto requestDto) {
-        // 1. Validate that user exists
-        UUID userUid = UUID.fromString(requestDto.getUserId());
-        UsersEntity user = userRepository.findByUid(userUid)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + requestDto.getUserId()));
-
+    	
+    	
+    	Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+    	
+    	
+    	
+      
         // 2. Check if doctor profile already exists for this user
-        if (doctorRepository.existsByUser(user)) {
+        if (doctorRepository.existsByUser(currentUserOpt.get())) {
             throw new RuntimeException("Doctor profile already exists for this user");
         }
 
@@ -68,7 +141,7 @@ public class DoctorService {
 
         // 5. Create new DoctorsEntity
         DoctorsEntity doctor = new DoctorsEntity(
-                user,
+        		currentUserOpt.get(),
                 requestDto.getExperienceYears(),
                 requestDto.getHospitalClinicName(),
                 requestDto.getHospitalClinicAddress(),
@@ -92,7 +165,7 @@ public class DoctorService {
                 null, // resignationDate - null for new doctors
                 employmentType,
                 requestDto.getIsActive(),
-                user.getUid().toString(), // createdBy - using user's UUID
+                currentUserOpt.get().getUid().toString(), // createdBy - using user's UUID
                 null, // updatedBy - null on creation
                 requestDto.getEmergencyContactNumber(),
                 requestDto.getLatitude(),
@@ -105,7 +178,6 @@ public class DoctorService {
         // 7. Save and return
         return doctorRepository.save(doctor);
     }
-    
     
     
     

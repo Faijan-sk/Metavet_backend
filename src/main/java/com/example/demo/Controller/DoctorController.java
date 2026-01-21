@@ -1,14 +1,19 @@
 package com.example.demo.Controller;
 
+import com.example.demo.Config.SpringSecurityAuditorAware;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.example.demo.Dto.DoctorDtoForAdmin;
 import com.example.demo.Dto.DoctorDtoForClient;
 import com.example.demo.Dto.DoctorRequestDto;
 import com.example.demo.Entities.DoctorsEntity;
+import com.example.demo.Entities.GroomerToClientKycEntity;
 import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Enum.DoctorProfileStatus;
 import com.example.demo.Enum.EmploymentType;
 import com.example.demo.Enum.Gender;
 import com.example.demo.Service.DoctorService;
+import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Repository.UserRepo;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +40,14 @@ public class DoctorController {
 
     @Autowired
     private DoctorService doctorService;
+    
+    @Autowired
+    private SpringSecurityAuditorAware auditorAware;
+    
+    @Autowired
+    private DoctorRepo doctorRepository;
+    
+    
     
 
     // If you don't need userRepository in controller, you can remove this.
@@ -77,187 +90,38 @@ public class DoctorController {
         }
     }
     
-    
-//    @PostMapping
-//    public ResponseEntity<?> createDoctor(@Valid @RequestBody DoctorsEntity doctor) {
+//    @PostMapping("/create")
+//    public ResponseEntity<Map<String, Object>> createDoctor(@Valid @RequestBody DoctorRequestDto requestDto) {
+//        Map<String, Object> response = new HashMap();
+//        
 //        try {
-//            DoctorsEntity savedDoctor = doctorService.createDoctorEnhanced(doctor);
-//
-//            // Initialize lazy fields to avoid serialization issues
-//            if (savedDoctor.getUser() != null) {
-//                savedDoctor.getUser().getEmail(); // touch the lazy field
-//            }
-//
-//            return ResponseEntity.status(HttpStatus.CREATED)
-//                .body(Map.of(
-//                    "success", true,
-//                    "message", "Doctor profile created successfully. User profile marked as completed.",
-//                    "data", savedDoctor,
-//                    "profileCompleted", savedDoctor.getUser().isProfileCompleted()
-//                ));
-//        } catch (IllegalArgumentException e) {
-//            return ResponseEntity.badRequest()
-//                .body(Map.of(
-//                    "success", false,
-//                    "message", e.getMessage()
-//                ));
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return ResponseEntity.internalServerError()
-//                .body(Map.of(
-//                    "success", false,
-//                    "message", "Failed to create doctor profile: " + e.getMessage()
-//                ));
-//        }
-//    }
-    
-//    /**
-//     * Create a new doctor profile
-//     * POST /api/doctors
-//     */
-//    @PostMapping
-//    public ResponseEntity<?> createDoctor(@Valid @RequestBody Map<String, Object> requestBody) {
-//        try {
-//            // Extract userId and validate
-//            String userIdStr = (String) requestBody.get("userId");
-//            if (userIdStr == null || userIdStr.trim().isEmpty()) {
-//                return ResponseEntity.badRequest()
-//                    .body(Map.of(
-//                        "success", false,
-//                        "message", "userId is required"
-//                    ));
-//            }
-//
-//            UUID userUid;
-//            try {
-//                userUid = UUID.fromString(userIdStr);
-//            } catch (IllegalArgumentException e) {
-//                return ResponseEntity.badRequest()
-//                    .body(Map.of(
-//                        "success", false,
-//                        "message", "Invalid userId format. Must be a valid UUID"
-//                    ));
-//            }
-//
-//            // Find user
-//            Optional<UsersEntity> userOpt = userRepository.findByUid(userUid);
-//            if (userOpt.isEmpty()) {
-//                return ResponseEntity.badRequest()
-//                    .body(Map.of(
-//                        "success", false,
-//                        "message", "User not found with UID: " + userUid
-//                    ));
-//            }
-//
-//            // Create doctor entity
-//            DoctorsEntity doctor = new DoctorsEntity();
-//            doctor.setUser(userOpt.get());
+//            DoctorsEntity createdDoctor = doctorService.createDoctor(requestDto);
 //            
-//            // Map all fields from request
-//            if (requestBody.containsKey("experienceYears")) {
-//                doctor.setExperienceYears(((Number) requestBody.get("experienceYears")).intValue());
-//            }
-//            if (requestBody.containsKey("hospitalClinicName")) {
-//                doctor.setHospitalClinicName((String) requestBody.get("hospitalClinicName"));
-//            }
-//            if (requestBody.containsKey("hospitalClinicAddress")) {
-//                doctor.setHospitalClinicAddress((String) requestBody.get("hospitalClinicAddress"));
-//            }
-//            if (requestBody.containsKey("pincode")) {
-//                doctor.setPincode((String) requestBody.get("pincode"));
-//            }
-//            if (requestBody.containsKey("address")) {
-//                doctor.setAddress((String) requestBody.get("address"));
-//            }
-//            if (requestBody.containsKey("country")) {
-//                doctor.setCountry((String) requestBody.get("country"));
-//            }
-//            if (requestBody.containsKey("city")) {
-//                doctor.setCity((String) requestBody.get("city"));
-//            }
-//            if (requestBody.containsKey("state")) {
-//                doctor.setState((String) requestBody.get("state"));
-//            }
-//            if (requestBody.containsKey("bio")) {
-//                doctor.setBio((String) requestBody.get("bio"));
-//            }
-//            if (requestBody.containsKey("consultationFee")) {
-//                doctor.setConsultationFee(((Number) requestBody.get("consultationFee")).doubleValue());
-//            }
-//            if (requestBody.containsKey("isActive")) {
-//                doctor.setIsActive((Boolean) requestBody.get("isActive"));
-//            }
-//            if (requestBody.containsKey("isAvailable")) {
-//                doctor.setIsAvailable((Boolean) requestBody.get("isAvailable"));
-//            }
-//            if (requestBody.containsKey("gender")) {
-//                doctor.setGender(Gender.valueOf((String) requestBody.get("gender")));
-//            }
-//            if (requestBody.containsKey("dateOfBirth")) {
-//                doctor.setDateOfBirth(LocalDate.parse((String) requestBody.get("dateOfBirth")));
-//            }
-//            if (requestBody.containsKey("licenseNumber")) {
-//                doctor.setLicenseNumber((String) requestBody.get("licenseNumber"));
-//            }
-//            if (requestBody.containsKey("licenseIssueDate")) {
-//                doctor.setLicenseIssueDate(LocalDate.parse((String) requestBody.get("licenseIssueDate")));
-//            }
-//            if (requestBody.containsKey("licenseExpiryDate")) {
-//                doctor.setLicenseExpiryDate(LocalDate.parse((String) requestBody.get("licenseExpiryDate")));
-//            }
-//            if (requestBody.containsKey("qualification")) {
-//                doctor.setQualification((String) requestBody.get("qualification"));
-//            }
-//            if (requestBody.containsKey("specialization")) {
-//                doctor.setSpecialization((String) requestBody.get("specialization"));
-//            }
-//            if (requestBody.containsKey("previousWorkplace")) {
-//                doctor.setPreviousWorkplace((String) requestBody.get("previousWorkplace"));
-//            }
-//            if (requestBody.containsKey("joiningDate")) {
-//                doctor.setJoiningDate(LocalDate.parse((String) requestBody.get("joiningDate")));
-//            }
-//            if (requestBody.containsKey("resignationDate")) {
-//                doctor.setResignationDate(LocalDate.parse((String) requestBody.get("resignationDate")));
-//            }
-//            if (requestBody.containsKey("employmentType")) {
-//                doctor.setEmploymentType(EmploymentType.valueOf((String) requestBody.get("employmentType")));
-//            }
-//            if (requestBody.containsKey("emergencyContactNumber")) {
-//                doctor.setEmergencyContactNumber((String) requestBody.get("emergencyContactNumber"));
-//            }
-//
-//            DoctorsEntity savedDoctor = doctorService.createDoctorEnhanced(doctor);
-//
-//            // Initialize lazy fields to avoid serialization issues
-//            if (savedDoctor.getUser() != null) {
-//                savedDoctor.getUser().getEmail();
-//            }
-//
-//            return ResponseEntity.status(HttpStatus.CREATED)
-//                .body(Map.of(
-//                    "success", true,
-//                    "message", "Doctor profile created successfully. User profile marked as completed.",
-//                    "data", savedDoctor,
-//                    "profileCompleted", savedDoctor.getUser().isProfileCompleted()
-//                ));
-//        } catch (IllegalArgumentException e) {
-//            return ResponseEntity.badRequest()
-//                .body(Map.of(
-//                    "success", false,
-//                    "message", e.getMessage(),
-//                    "error", "VALIDATION_ERROR"
-//                ));
+//            response.put("success", true);
+//            response.put("message", "Doctor profile created successfully");
+//            response.put("data", createdDoctor);
+//            response.put("doctorId", createdDoctor.getDoctorId());
+//            
+//            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+//            
+//        } catch (RuntimeException e) {
+//            response.put("success", false);
+//            response.put("message", e.getMessage());
+//            response.put("data", null);
+//            
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+//            
 //        } catch (Exception e) {
-//            e.printStackTrace();
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                .body(Map.of(
-//                    "success", false,
-//                    "message", "Failed to create doctor profile: " + e.getMessage(),
-//                    "error", "SERVER_ERROR"
-//                ));
+//            response.put("success", false);
+//            response.put("message", "An error occurred while creating doctor profile");
+//            response.put("error", e.getMessage());
+//            
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 //        }
 //    }
+    
+    
+
     
 
     /**
@@ -410,24 +274,7 @@ public class DoctorController {
         }
     }
 
-    // -------------- SEARCH / FILTER endpoints (kept same) --------------
-
-    @GetMapping("/license/{licenseNumber}")
-    public ResponseEntity<?> getDoctorByLicense(@PathVariable String licenseNumber) {
-        try {
-            Optional<DoctorsEntity> doctor = doctorService.getDoctorByLicenseNumber(licenseNumber);
-            if (doctor.isPresent()) {
-                return ResponseEntity.ok(Map.of("success", true, "data", doctor.get()));
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error retrieving doctor: " + e.getMessage()
-            ));
-        }
-    }
+    
 
     @GetMapping("/specialization/{specialization}")
     public ResponseEntity<?> getDoctorsBySpecialization(@PathVariable String specialization) {
@@ -442,32 +289,9 @@ public class DoctorController {
         }
     }
 
-    @GetMapping("/city/{city}")
-    public ResponseEntity<?> getDoctorsByCity(@PathVariable String city) {
-        try {
-            List<DoctorsEntity> doctors = doctorService.getDoctorsByCity(city);
-            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error retrieving doctors: " + e.getMessage()
-            ));
-        }
-    }
+    
 
-    @GetMapping("/state/{state}")
-    public ResponseEntity<?> getDoctorsByState(@PathVariable String state) {
-        try {
-            List<DoctorsEntity> doctors = doctorService.getDoctorsByState(state);
-            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error retrieving doctors: " + e.getMessage()
-            ));
-        }
-    }
-
+   
     @GetMapping("/available")
     public ResponseEntity<?> getAvailableDoctors() {
         try {
@@ -481,18 +305,18 @@ public class DoctorController {
         }
     }
 
-    @GetMapping("/active")
-    public ResponseEntity<?> getActiveDoctors() {
-        try {
-            List<DoctorsEntity> doctors = doctorService.getActiveDoctors();
-            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error retrieving active doctors: " + e.getMessage()
-            ));
-        }
-    }
+//    @GetMapping("/active")
+//    public ResponseEntity<?> getActiveDoctors() {
+//        try {
+//            List<DoctorsEntity> doctors = doctorService.getActiveDoctors();
+//            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+//                "success", false,
+//                "message", "Error retrieving active doctors: " + e.getMessage()
+//            ));
+//        }
+//    }
 
     // ==================== PROFILE STATUS ENDPOINTS ====================
 
@@ -643,70 +467,81 @@ public class DoctorController {
         }
     }
 
-    // ==================== FILTER ENDPOINTS ====================
-
-    @GetMapping("/filter/experience")
-    public ResponseEntity<?> getDoctorsByExperience(@RequestParam(defaultValue = "0") @Min(0) Integer min,
-                                                   @RequestParam(defaultValue = "50") @Max(50) Integer max) {
-        try {
-            List<DoctorsEntity> doctors = doctorService.getDoctorsWithExperienceRange(min, max);
-            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error filtering doctors by experience: " + e.getMessage()
-            ));
-        }
-    }
-
-    @GetMapping("/filter/fee")
-    public ResponseEntity<?> getDoctorsByFeeRange(@RequestParam(defaultValue = "0") Double min,
-                                                  @RequestParam(defaultValue = "50000") Double max) {
-        try {
-            List<DoctorsEntity> doctors = doctorService.getDoctorsWithFeeRange(min, max);
-            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error filtering doctors by fee: " + e.getMessage()
-            ));
-        }
-    }
-
-    @GetMapping("/filter/gender/{gender}")
-    public ResponseEntity<?> getDoctorsByGender(@PathVariable Gender gender) {
-        try {
-            List<DoctorsEntity> doctors = doctorService.getDoctorsByGender(gender);
-            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error filtering doctors by gender: " + e.getMessage()
-            ));
-        }
-    }
-
-    @GetMapping("/filter/employment/{type}")
-    public ResponseEntity<?> getDoctorsByEmploymentType(@PathVariable EmploymentType type) {
-        try {
-            List<DoctorsEntity> doctors = doctorService.getDoctorsByEmploymentType(type);
-            return ResponseEntity.ok(Map.of("success", true, "count", doctors.size(), "data", doctors));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Error filtering doctors by employment type: " + e.getMessage()
-            ));
-        }
-    }
-
-
-
     
+  private static final Logger logger = LoggerFactory.getLogger(DoctorController.class);
 
-  
+@GetMapping("/get-status")
+public ResponseEntity<?> getDoctorStatus() {
+    try {
+        // 1️⃣ Get logged-in user
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+        
+        if (currentUserOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(buildErrorResponse(
+                            "UNAUTHORIZED",
+                            "User is not authenticated.",
+                            null
+                    ));
+        }
 
-  
+        UsersEntity loggedInUser = currentUserOpt.get();
 
+        // 2️⃣ Fetch doctor by user
+        Optional<DoctorsEntity> doctorOpt = doctorRepository.findByUser(loggedInUser);
 
+        if (doctorOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(buildErrorResponse(
+                            "DOCTOR_NOT_FOUND",
+                            "No doctor profile exists for the logged-in user.",
+                            loggedInUser.getUid()
+                    ));
+        }
 
+        DoctorsEntity doctor = doctorOpt.get();
+
+        // 3️⃣ Prepare response
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("status", doctor.getDoctorProfileStatus().toString());
+        responseData.put("updatedAt", doctor.getUpdatedAt());
+
+        return ResponseEntity.ok(
+                buildSuccessResponse(
+                        "Doctor profile status retrieved successfully.",
+                        responseData
+                )
+        );
+
+    } catch (Exception ex) {
+        logger.error("💥 Error fetching doctor status", ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(buildErrorResponse(
+                        "INTERNAL_SERVER_ERROR",
+                        "Unable to fetch doctor status. Please try again later.",
+                        ex.getMessage()
+                ));
+    }
+}
+
+// Helper methods
+private Map<String, Object> buildSuccessResponse(String message, Object data) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("success", true);
+    response.put("message", message);
+    response.put("data", data);
+    return response;
+}
+
+private Map<String, Object> buildErrorResponse(String errorCode, String message, Object additionalInfo) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("success", false);
+    response.put("errorCode", errorCode);
+    response.put("message", message);
+    if (additionalInfo != null) {
+        response.put("details", additionalInfo);
+    }
+    return response;
+}
 }

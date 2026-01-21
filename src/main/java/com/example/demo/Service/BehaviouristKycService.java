@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.BehaviouristKycRequestDto;
+import com.example.demo.Dto.GetAllBehaviouristResponse;
 import com.example.demo.Entities.BehaviouristKyc;
 import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.BehaviouristKyc.ApprovalStatus;
@@ -27,6 +28,13 @@ import com.example.demo.Repository.BehaviouristKycRepo;
 import com.example.demo.Repository.ServiceProviderRepo;
 
 import jakarta.validation.ValidationException;
+
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+
 
 @Service
 public class BehaviouristKycService {
@@ -444,4 +452,96 @@ public class BehaviouristKycService {
 
         return filePath;
     }
+    
+    
+    public Page<GetAllBehaviouristResponse> getAllBehaviourists(
+            Double userLat,
+            Double userLon,
+            Double maxDistance,
+            String searchTerm,
+            String serviceType,
+            int page,
+            int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<BehaviouristKyc> behaviouristPage = behaviouristKycRepo.findBehaviouristsWithinDistance(
+                userLat, userLon, maxDistance, searchTerm, serviceType, pageable);
+
+        return behaviouristPage.map(behaviouristKyc -> mapToDto(behaviouristKyc, userLat, userLon));
+    }
+
+    // ===================== MAP ENTITY TO DTO =====================
+    private GetAllBehaviouristResponse mapToDto(BehaviouristKyc kyc, Double userLat, Double userLon) {
+        GetAllBehaviouristResponse dto = new GetAllBehaviouristResponse();
+
+        // User fields
+        if (kyc.getUser() != null) {
+            dto.setUid(kyc.getUser().getUid().toString());
+            dto.setFullName(kyc.getUser().getFirstName() + " " + kyc.getUser().getLastName());
+            dto.setEmail(kyc.getUser().getEmail());
+            dto.setPhoneNumber(kyc.getUser().getFullPhoneNumber());
+        }
+
+        // Service Provider fields
+        if (kyc.getServiceProvider() != null && kyc.getServiceProvider().getServiceType() != null) {
+            dto.setServiceType(kyc.getServiceProvider().getServiceType().name());
+        }
+
+        // KYC fields
+        dto.setAddress(kyc.getAddress());
+        dto.setServiceArea(kyc.getServiceArea());
+        dto.setYearsExperience(kyc.getYearsExperience());
+        dto.setServiceRadius(kyc.getServiceRadius());
+        dto.setServicesOtherText(kyc.getServicesOtherText());
+        dto.setSpecializationOtherText(kyc.getSpecializationOtherText());
+
+        // Services offered
+        if (kyc.getServicesOffered() != null) {
+            dto.setServicesOffered(
+                kyc.getServicesOffered().stream()
+                    .map(service -> service.getLabel())
+                    .collect(Collectors.toList())
+            );
+        }
+
+        // Specializations
+        if (kyc.getSpecializations() != null) {
+            dto.setSpecializations(
+                kyc.getSpecializations().stream()
+                    .map(spec -> spec.getLabel())
+                    .collect(Collectors.toList())
+            );
+        }
+
+        // Calculate distance
+        if (kyc.getLatitude() != null && kyc.getLongitude() != null) {
+            double distance = calculateDistance(
+                userLat, userLon,
+                Double.parseDouble(kyc.getLatitude()),
+                Double.parseDouble(kyc.getLongitude())
+            );
+            dto.setDistanceKm(Math.round(distance * 100.0) / 100.0); // Round to 2 decimal places
+        }
+
+        return dto;
+    }
+
+    // ===================== HAVERSINE DISTANCE FORMULA =====================
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int EARTH_RADIUS = 6371; // Kilometers
+
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return EARTH_RADIUS * c;
+    }
+    
+    
 }
