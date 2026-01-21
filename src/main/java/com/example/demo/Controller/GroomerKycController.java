@@ -1,6 +1,7 @@
 package com.example.demo.Controller;
 
 import java.io.File;
+import org.springframework.data.domain.Page;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.Dto.ApiResponse;
+import com.example.demo.Dto.GetAllGroomerResponse;
 import com.example.demo.Dto.GroomerKycRequestDto;
 import com.example.demo.Entities.GroomerKyc;
 import com.example.demo.Entities.GroomerKyc.ApplicationStatus;
@@ -528,6 +530,32 @@ public class GroomerKycController {
 		return groomerKycService.statusCheck();
 	}
 	
-	
-	
+	// ===================== GET NEARBY GROOMERS =====================
+	/**
+	 * Response Scenarios:
+	 * 1. Success (200): Returns paginated list of nearby groomers
+	 * 2. Error (500): Database/calculation error
+	 */
+	@GetMapping("/nearby")
+	public ResponseEntity<ApiResponse<Page<GetAllGroomerResponse>>> getNearbyGroomers(
+			@RequestParam Double latitude,
+			@RequestParam Double longitude,
+			@RequestParam(defaultValue = "10.0") Double maxDistance,
+			@RequestParam(required = false) String searchTerm,
+			@RequestParam(required = false) String serviceType,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
+
+		try {
+			Page<GetAllGroomerResponse> groomers = groomerKycService.getAllGroomers(
+					latitude, longitude, maxDistance, searchTerm, serviceType, page, size);
+
+			return ResponseEntity.ok(ApiResponse.success("Groomers retrieved successfully", groomers));
+			
+		} catch (Exception e) {
+			logger.error("Error fetching nearby groomers", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(ApiResponse.serverError("Error: " + e.getMessage()));
+		}
+	}
 }

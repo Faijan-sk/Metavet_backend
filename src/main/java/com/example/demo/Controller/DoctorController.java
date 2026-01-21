@@ -35,6 +35,7 @@ public class DoctorController {
 
     @Autowired
     private DoctorService doctorService;
+    
 
     // If you don't need userRepository in controller, you can remove this.
     @Autowired

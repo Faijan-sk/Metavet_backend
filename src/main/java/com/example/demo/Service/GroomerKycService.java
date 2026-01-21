@@ -6,28 +6,31 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.Config.SpringSecurityAuditorAware;
 import com.example.demo.Dto.ApiResponse;
+import com.example.demo.Dto.GetAllGroomerResponse;
 import com.example.demo.Dto.GroomerKycRequestDto;
 import com.example.demo.Entities.GroomerKyc;
-import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.GroomerKyc.ApplicationStatus;
 import com.example.demo.Entities.GroomerKyc.ServiceOffered;
 import com.example.demo.Entities.ServiceProvider;
+import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Repository.GroomerKycRepo;
 import com.example.demo.Repository.ServiceProviderRepo;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import jakarta.validation.ValidationException;
 
@@ -532,6 +535,85 @@ public class GroomerKycService {
 
     return ResponseEntity.ok(response);
 }
+
+	
+	public Page<GetAllGroomerResponse> getAllGroomers(
+            Double userLat,
+            Double userLon,
+            Double maxDistance,
+            String searchTerm,
+            String serviceType,
+            int page,
+            int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<GroomerKyc> groomerPage = groomerKycRepository.findGroomersWithinDistance(
+                userLat, userLon, maxDistance, searchTerm, serviceType, pageable);
+
+        return groomerPage.map(groomerKyc -> mapToDto(groomerKyc, userLat, userLon));
+    }
+
+    private GetAllGroomerResponse mapToDto(GroomerKyc kyc, Double userLat, Double userLon) {
+        GetAllGroomerResponse dto = new GetAllGroomerResponse();
+
+        // User fields
+        if (kyc.getUser() != null) {
+            dto.setUid(kyc.getUser().getUid().toString());
+            dto.setFullName(kyc.getUser().getFirstName() + " " + kyc.getUser().getLastName());
+            dto.setEmail(kyc.getUser().getEmail());
+            dto.setPhoneNumber(kyc.getUser().getFullPhoneNumber());
+        }
+
+        // Service Provider fields
+        if (kyc.getServiceProvider() != null && kyc.getServiceProvider().getServiceType() != null) {
+            dto.setServiceType(kyc.getServiceProvider().getServiceType().name());
+        }
+
+        // KYC fields
+        dto.setFullLegalName(kyc.getFullLegalName());
+        dto.setBusinessName(kyc.getBusinessName());
+        dto.setServiceLocationType(kyc.getServiceLocationType() != null ? 
+            kyc.getServiceLocationType().name() : null);
+        dto.setYearsExperience(kyc.getYearsExperience());
+
+        // Services offered
+        if (kyc.getServicesOffered() != null) {
+            dto.setServicesOffered(
+                kyc.getServicesOffered().stream()
+                    .map(service -> service.getLabel())
+                    .collect(Collectors.toList())
+            );
+        }
+
+        // Calculate distance
+        if (kyc.getLatitude() != null && kyc.getLongitude() != null) {
+            double distance = calculateDistance(
+                userLat, userLon,
+                Double.parseDouble(kyc.getLatitude()),
+                Double.parseDouble(kyc.getLongitude())
+            );
+            dto.setDistanceKm(Math.round(distance * 100.0) / 100.0); // Round to 2 decimal places
+        }
+
+        return dto;
+    }
+
+    // Haversine formula for distance calculation
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int EARTH_RADIUS = 6371; // Kilometers
+
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return EARTH_RADIUS * c;
+    }
 
 	
 	

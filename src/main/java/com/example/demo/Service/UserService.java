@@ -168,7 +168,8 @@ public UserResponseDto registerUser(UserRequestDto request) {
 	    
 	    responseDto.setOtp(rawOtp);
 	    responseDto.setToken(generateToken(request.getPhoneNumber()));
-	    
+	    responseDto.setUserType(savedUser.getUserType());
+	    responseDto.setPhoneNumber(savedUser.getPhoneNumber());
 	    
 	   
 	   
