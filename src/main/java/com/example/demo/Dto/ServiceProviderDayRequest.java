@@ -1,28 +1,20 @@
 package com.example.demo.Dto;
 
-
 import com.example.demo.Enum.DayOfWeek;
 import java.time.LocalTime;
 
-public class DoctorDayRequest {
-    
+public class ServiceProviderDayRequest {
+
     private DayOfWeek dayOfWeek;
-    
     private LocalTime startTime;
-    
     private LocalTime endTime;
-    
     private Integer slotDurationMinutes;
-    
-    
 
     // Constructors
-    public DoctorDayRequest() {
-    	
-    }
+    public ServiceProviderDayRequest() {}
 
-    public DoctorDayRequest(DayOfWeek dayOfWeek, LocalTime startTime, 
-                           LocalTime endTime, Integer slotDurationMinutes) {
+    public ServiceProviderDayRequest(DayOfWeek dayOfWeek, LocalTime startTime,
+                                     LocalTime endTime, Integer slotDurationMinutes) {
         this.dayOfWeek = dayOfWeek;
         this.startTime = startTime;
         this.endTime = endTime;

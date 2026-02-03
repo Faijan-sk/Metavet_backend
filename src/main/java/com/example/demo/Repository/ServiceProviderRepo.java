@@ -1,5 +1,6 @@
 package com.example.demo.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,8 +13,11 @@ public interface ServiceProviderRepo extends JpaRepository<ServiceProvider, Long
 
 	ServiceProvider findByOwnerUid(UUID uid);
 	
-	ServiceProvider findByUid(UUID uid);
+//	ServiceProvider findByUid(UUID uid);
 	
-	
+	// Add these methods to ServiceProviderRepo
+	Optional<ServiceProvider> findByUid(UUID uid);
+	boolean existsByUid(UUID uid);
+	Optional<ServiceProvider> findByOwner_Uid(UUID ownerUid);
 
 }

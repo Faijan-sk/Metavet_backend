@@ -64,7 +64,7 @@ public class ServiceProviderService {
 	    try {
 	        UUID serviceUid = UUID.fromString(uuid);
 
-	        ServiceProvider serviceProvider = serviceProviderRepo.findByUid(serviceUid);
+	        ServiceProvider serviceProvider = serviceProviderRepo.findByUid(serviceUid).get();
 
 	        if (serviceProvider == null) {
 	            return ApiResponse.notFound("❌ Service Provider not found for UID: " + uuid);
@@ -78,5 +78,12 @@ public class ServiceProviderService {
 	    } catch (Exception e) {
 	        return ApiResponse.serverError("❌ Unexpected server error occurred");
 	    }
+	}
+	
+	// Add this method to ServiceProviderService
+	public UUID getServiceProviderUidByUserUid(UUID userUid) {
+	    ServiceProvider serviceProvider = serviceProviderRepo.findByOwner_Uid(userUid)
+	            .orElseThrow(() -> new RuntimeException("Service Provider not found for user"));
+	    return serviceProvider.getUid();
 	}
 }

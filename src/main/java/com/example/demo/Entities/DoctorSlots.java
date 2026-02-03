@@ -17,6 +17,7 @@ public class DoctorSlots extends BaseEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "slots", "doctor"})
     private DoctorDays doctorDay;
 
+    
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 

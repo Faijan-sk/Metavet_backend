@@ -37,7 +37,11 @@ public class DoctorService {
     private static final Logger log = LoggerFactory.getLogger(DoctorService.class);
 
     private final DoctorRepo doctorRepository;
+    
+    
     private final UserRepo userRepository;
+    
+    
 
     public DoctorService(DoctorRepo doctorRepository, UserRepo userRepository) {
         this.doctorRepository = doctorRepository;
@@ -152,6 +156,11 @@ public class DoctorService {
                 requestDto.getState(),
                 requestDto.getBio(),
                 requestDto.getConsultationFee(),
+                
+                
+                	
+                
+                
                 true, // isAvailable - default true
                 gender,
                 requestDto.getDateOfBirth(),
