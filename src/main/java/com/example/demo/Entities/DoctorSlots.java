@@ -23,6 +23,16 @@ public class DoctorSlots extends BaseEntity {
 
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
+    
+    public Double getConsultationFees() {
+		return consultationFees;
+	}
+
+	public void setConsultationFees(Double consultationFees) {
+		this.consultationFees = consultationFees;
+	}
+
+	private Double consultationFees;
 
     // Custom getters for JSON response
     @JsonProperty("slotId")

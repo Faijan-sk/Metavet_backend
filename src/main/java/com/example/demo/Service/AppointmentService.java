@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,10 +62,20 @@ public class AppointmentService {
      */
     public List<DoctorSlots> getAvailableSlots(Long doctorId, Long doctorDayId, LocalDate date) {
 
+    	
+    	
         if (doctorId == null || doctorDayId == null || date == null) {
             throw new RuntimeException("Doctor ID, DoctorDay ID, and Date are required");
         }
 
+//			DoctorsEntity doctor = doctorRepository.findById(doctorId);
+
+			Optional<DoctorsEntity> doctorOpt = doctorRepository.findById(doctorDayId);
+			
+			Double fees = doctorOpt.get().getConsultationFee();
+			
+		
+			
         if (!doctorRepository.existsById(doctorId)) {
             throw new RuntimeException("Doctor not found with id: " + doctorId);
         }
@@ -75,6 +86,7 @@ public class AppointmentService {
 
         // 1. Get all slots configured for this doctor day
         List<DoctorSlots> allSlots = doctorSlotRepository.findByDoctorDay_Id(doctorDayId);
+
 
         // 2. Get booked slot IDs for this doctor, day and date
         List<Long> bookedSlotIds = appointmentRepository
@@ -87,6 +99,7 @@ public class AppointmentService {
         // 3. Return only slots not booked
         return allSlots.stream()
                 .filter(slot -> !bookedSlotIds.contains(slot.getId()))
+                .peek(slot -> slot.setConsultationFees(fees)) // Assign the fee to each slot object
                 .collect(Collectors.toList());
     }
 

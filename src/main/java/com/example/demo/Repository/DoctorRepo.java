@@ -35,6 +35,8 @@ public interface DoctorRepo extends JpaRepository<DoctorsEntity, Long> {
     List<DoctorsEntity> findByState(String state);
 
     List<DoctorsEntity> findByCountry(String country);
+    
+   Optional<DoctorsEntity> findById(long doctorId);
 
     // ---------- BOOLEAN FILTERS ----------
     List<DoctorsEntity> findByIsAvailableTrue();

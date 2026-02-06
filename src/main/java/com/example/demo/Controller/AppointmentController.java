@@ -10,6 +10,7 @@ import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.DoctorSlots;
 import com.example.demo.Enum.AppointmentStatus;
 import com.example.demo.Enum.DayOfWeek;
+import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Service.AppointmentService;
 import com.example.demo.Service.DoctorService;
 
@@ -38,6 +39,9 @@ public class AppointmentController {
 
     @Autowired
     private AppointmentService appointmentService;
+    
+    @Autowired
+    private DoctorRepo doctorRepository;
 
     @Autowired
     private SpringSecurityAuditorAware auditorAware;
@@ -123,6 +127,29 @@ public class AppointmentController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Missing required fields. Required: doctorId, doctorDayId, slotId, appointmentDate"));
             }
+            
+            
+            
+            
+            
+//            Long doctorId;
+//
+//            Object doctorIdObj = request.get("doctorId");
+//
+//            if (doctorIdObj instanceof Number) {
+//                doctorId = ((Number) doctorIdObj).longValue();
+//            } else if (doctorIdObj instanceof String) {
+//                doctorId = Long.parseLong((String) doctorIdObj);
+//            } else {
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//                        .body(Map.of("error", "Invalid type for doctorId"));
+//            }
+//
+//            
+//            
+//            System.out.println("OOOOOOOOOOOOOOOOOOOOOOOOO" + request.get("doctorId") + " " + doctorId );
+//            
+//            Optional<DoctorsEntity> doctorOpt =  doctorRepository.findById( request.get("doctorId"))
 
             // 3) Extract petId (can be null)
             Long petId = (request.get("petId") != null) 
@@ -151,9 +178,25 @@ public class AppointmentController {
 
             // 5) Extract other required fields
             Long doctorId = Long.parseLong(request.get("doctorId").toString());
+            
+            Optional<DoctorsEntity> doctorOpt = doctorRepository.findById(doctorId);
+            
+            Double ConsultationFees = doctorOpt.get().getConsultationFee();
+            
+            
+   
             Long doctorDayId = Long.parseLong(request.get("doctorDayId").toString());
             Long slotId = Long.parseLong(request.get("slotId").toString());
             LocalDate appointmentDate = LocalDate.parse(request.get("appointmentDate").toString());
+            
+    
+            // Payment Integration
+            
+            
+            
+            
+            
+            
 
             // 6) Call service with extracted userId and optional petId
             Appointment appointment = appointmentService.bookAppointment(
