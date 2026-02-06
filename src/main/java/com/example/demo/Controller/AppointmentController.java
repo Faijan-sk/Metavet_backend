@@ -1,6 +1,15 @@
 package com.example.demo.Controller;
 
 import com.example.demo.Config.SpringSecurityAuditorAware;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
+import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.checkout.Session;
+import com.stripe.param.checkout.SessionCreateParams;
+import com.example.demo.Entities.AppointmentPayment;
+import com.example.demo.Entities.AppointmentPayment.PaymentStatus;
 import com.example.demo.Dto.DoctorDaysResponseDto;
 import com.example.demo.Dto.SlotResponseDto;
 import com.example.demo.Entities.Appointment;
@@ -10,6 +19,7 @@ import com.example.demo.Entities.UsersEntity;
 import com.example.demo.Entities.DoctorSlots;
 import com.example.demo.Enum.AppointmentStatus;
 import com.example.demo.Enum.DayOfWeek;
+import com.example.demo.Repository.AppointmentPaymentRepo;
 import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Service.AppointmentService;
 import com.example.demo.Service.DoctorService;
@@ -45,6 +55,9 @@ public class AppointmentController {
 
     @Autowired
     private SpringSecurityAuditorAware auditorAware;
+    
+    @Autowired
+    private AppointmentPaymentRepo appointmentPaymentRepo;
 
     /**
      * ✅ API 1: Get all doctors available on a specific day
@@ -99,128 +112,282 @@ public class AppointmentController {
      *   "appointmentDate": "2025-11-05"
      * }
      */
-    @PostMapping("/book")
-    public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> request) {
-        try {
-            // 1) Get current logged-in user from auditorAware
-            Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
-            if (currentUserOpt.isEmpty()) {
-                logger.info("Unauthenticated attempt to book appointment");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "User not authenticated"));
-            }
-            UsersEntity currentUser = currentUserOpt.get();
-
-            // Use DB primary key (Long) for appointment.userId
-            Long userId = currentUser.getId();
-            if (userId == null) {
-                logger.warn("Authenticated user has null database id (getId()). Cannot book.");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("error", "Authenticated user has invalid id"));
-            }
-
-            // 2) Check required fields (except petId - it depends on userType)
-            if (request.get("doctorId") == null
-                    || request.get("doctorDayId") == null 
-                    || request.get("slotId") == null
-                    || request.get("appointmentDate") == null ) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Missing required fields. Required: doctorId, doctorDayId, slotId, appointmentDate"));
-            }
-            
-            
-            
-            
-            
-//            Long doctorId;
-//
-//            Object doctorIdObj = request.get("doctorId");
-//
-//            if (doctorIdObj instanceof Number) {
-//                doctorId = ((Number) doctorIdObj).longValue();
-//            } else if (doctorIdObj instanceof String) {
-//                doctorId = Long.parseLong((String) doctorIdObj);
-//            } else {
-//                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                        .body(Map.of("error", "Invalid type for doctorId"));
-//            }
-//
-//            
-//            
-//            System.out.println("OOOOOOOOOOOOOOOOOOOOOOOOO" + request.get("doctorId") + " " + doctorId );
-//            
-//            Optional<DoctorsEntity> doctorOpt =  doctorRepository.findById( request.get("doctorId"))
-
-            // 3) Extract petId (can be null)
-            Long petId = (request.get("petId") != null) 
-                    ? Long.parseLong(request.get("petId").toString()) 
-                    : null;
-
-            // 4) ✅ FIXED LOGIC: Check petId requirement based on userType
-            int userType = getUserTypeAsInt(currentUser);
-            
-            if (userType == 1) {
-                // userType = 1 (Client) -> petId is MANDATORY
-                if (petId == null) {
-                    logger.warn("Client (userType=1) attempted to book without petId");
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                            .body(Map.of("error", "Pet selection is required for clients. Please select a pet."));
-                }
-            } else if (userType == 2) {
-                // userType = 2 (Doctor) -> petId is OPTIONAL
-                logger.debug("Doctor (userType=2) booking appointment. PetId: {}", petId);
-            } else {
-                // Unknown userType
-                logger.warn("User with unknown userType {} attempted to book appointment", userType);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Invalid user type for booking appointments"));
-            }
-
-            // 5) Extract other required fields
-            Long doctorId = Long.parseLong(request.get("doctorId").toString());
-            
-            Optional<DoctorsEntity> doctorOpt = doctorRepository.findById(doctorId);
-            
-            Double ConsultationFees = doctorOpt.get().getConsultationFee();
-            
-            
-   
-            Long doctorDayId = Long.parseLong(request.get("doctorDayId").toString());
-            Long slotId = Long.parseLong(request.get("slotId").toString());
-            LocalDate appointmentDate = LocalDate.parse(request.get("appointmentDate").toString());
-            
-    
-            // Payment Integration
-            
-            
-            
-            
-            
-            
-
-            // 6) Call service with extracted userId and optional petId
-            Appointment appointment = appointmentService.bookAppointment(
-                    userId, petId, doctorId, doctorDayId, slotId, appointmentDate
-            );
-
-            logger.info("Appointment booked successfully - User: {}, UserType: {}, Pet: {}, Doctor: {}, Date: {}", 
-                    userId, userType, petId, doctorId, appointmentDate);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(appointment);
-            
-        } catch (RuntimeException ex) {
-            logger.warn("bookAppointment runtime error: {}", ex.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", ex.getMessage()));
-        } catch (Exception ex) {
-            logger.error("bookAppointment unexpected error", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Unexpected error: " + ex.getMessage()));
+   @PostMapping("/book")
+public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> request) {
+    try {
+        // 1) Get current logged-in user from auditorAware
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+        if (currentUserOpt.isEmpty()) {
+            logger.info("Unauthenticated attempt to book appointment");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
         }
+        UsersEntity currentUser = currentUserOpt.get();
+
+        // Use DB primary key (Long) for appointment.userId
+        Long userId = currentUser.getId();
+        if (userId == null) {
+            logger.warn("Authenticated user has null database id (getId()). Cannot book.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Authenticated user has invalid id"));
+        }
+
+        // 2) Check required fields (except petId - it depends on userType)
+        if (request.get("doctorId") == null
+                || request.get("doctorDayId") == null 
+                || request.get("slotId") == null
+                || request.get("appointmentDate") == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Missing required fields. Required: doctorId, doctorDayId, slotId, appointmentDate"));
+        }
+
+        // 3) Extract petId (can be null)
+        Long petId = (request.get("petId") != null) 
+                ? Long.parseLong(request.get("petId").toString()) 
+                : null;
+
+        // 4) ✅ FIXED LOGIC: Check petId requirement based on userType
+        int userType = getUserTypeAsInt(currentUser);
+        
+        if (userType == 1) {
+            // userType = 1 (Client) -> petId is MANDATORY
+            if (petId == null) {
+                logger.warn("Client (userType=1) attempted to book without petId");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Pet selection is required for clients. Please select a pet."));
+            }
+        } else if (userType == 2) {
+            // userType = 2 (Doctor) -> petId is OPTIONAL
+            logger.debug("Doctor (userType=2) booking appointment. PetId: {}", petId);
+        } else {
+            // Unknown userType
+            logger.warn("User with unknown userType {} attempted to book appointment", userType);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Invalid user type for booking appointments"));
+        }
+
+        // 5) Extract other required fields
+        Long doctorId = Long.parseLong(request.get("doctorId").toString());
+        Long doctorDayId = Long.parseLong(request.get("doctorDayId").toString());
+        Long slotId = Long.parseLong(request.get("slotId").toString());
+        LocalDate appointmentDate = LocalDate.parse(request.get("appointmentDate").toString());
+
+        // 6) Get doctor details and consultation fee
+        Optional<DoctorsEntity> doctorOpt = doctorRepository.findById(doctorId);
+        if (doctorOpt.isEmpty()) {
+            logger.warn("Doctor not found with id: {}", doctorId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Doctor not found"));
+        }
+        
+        DoctorsEntity doctor = doctorOpt.get();
+        Double consultationFee = doctor.getConsultationFee();
+        
+        if (consultationFee == null || consultationFee <= 0) {
+            logger.error("Invalid consultation fee for doctor {}", doctorId);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid consultation fee"));
+        }
+
+        // 7) ✅ CREATE STRIPE CHECKOUT SESSION
+        long amountInCents = (long) (consultationFee * 100);
+        
+        Stripe.apiKey = "REMOVED51REaGAAciZnsrOJJdkbymXf4RJazqpr39biTeNLzxqPU4dLBtvlIpEWjbausNQ5arNn9DckFLZcE0UuoR5dETAL600XbkOPGoq"; // Use environment variable in production
+        
+        SessionCreateParams params = SessionCreateParams.builder()
+                .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .setSuccessUrl("http://localhost:8080/payment-sucess?session_id={CHECKOUT_SESSION_ID}")
+                .setCancelUrl("http://localhost:8080/payment-failed?session_id={CHECKOUT_SESSION_ID}")
+                .addLineItem(
+                        SessionCreateParams.LineItem.builder()
+                                .setPriceData(
+                                        SessionCreateParams.LineItem.PriceData.builder()
+                                                .setCurrency("usd")
+                                                .setUnitAmount(amountInCents)
+                                                .setProductData(
+                                                        SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                                                .setName("Appointment with Dr. " + doctor.getUser().getFirstName() + doctor.getUser().getLastName())
+                                                                .setDescription("Date: " + appointmentDate.toString() + 
+                                                                              " | Consultation Fee: $" + consultationFee)
+                                                                .build()
+                                                )
+                                                .build()
+                                )
+                                .setQuantity(1L)
+                                .build()
+                )
+                .build();
+
+        Session session = Session.create(params);
+        
+        logger.info("Stripe session created - SessionId: {}, Amount: ${}, User: {}", 
+                session.getId(), consultationFee, userId);
+
+        // 8) ✅ SAVE PAYMENT RECORD IN DATABASE (PENDING STATUS)
+        AppointmentPayment payment = new AppointmentPayment();
+        payment.setSessionId(session.getId());
+        payment.setUserId(userId);
+        payment.setDoctorId(doctorId);
+        payment.setSlotId(slotId);
+        payment.setAmount(consultationFee);
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setCheckoutUrl(session.getUrl());
+        payment.setPetId(petId);
+        payment.setDoctorDayId(doctorDayId);
+        payment.setAppointmentDate(appointmentDate.toString());
+        
+        appointmentPaymentRepo.save(payment);
+        
+        logger.info("Payment record saved - SessionId: {}, User: {}, Doctor: {}", 
+                session.getId(), userId, doctorId);
+
+        // 9) ✅ RETURN CHECKOUT URL TO FRONTEND
+        return ResponseEntity.status(HttpStatus.OK).body(Map.of(
+                "message", "Payment session created successfully",
+                "sessionId", session.getId(),
+                "checkoutUrl", session.getUrl(),
+                "amount", consultationFee,
+                "doctorName", doctor.getUser().getFirstName()+doctor.getUser().getLastName(),
+                "appointmentDate", appointmentDate.toString()
+        ));
+        
+    } catch (StripeException ex) {
+        logger.error("Stripe API error: {}", ex.getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Payment initialization failed: " + ex.getMessage()));
+                
+    } catch (RuntimeException ex) {
+        logger.warn("bookAppointment runtime error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", ex.getMessage()));
+                
+    } catch (Exception ex) {
+        logger.error("bookAppointment unexpected error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Unexpected error: " + ex.getMessage()));
     }
+}
     
     
 
+   
+   
+   
+   
+   /**
+    * ✅ VERIFY PAYMENT AND BOOK APPOINTMENT
+    * GET /api/appointments/verify-payment/{sessionId}
+    * 
+    * Called after user completes payment on Stripe
+    * Automatically books appointment if payment is successful
+    */
+   @GetMapping("/verify-payment/{sessionId}")
+   public ResponseEntity<?> verifyPaymentAndBook(@PathVariable String sessionId) {
+       try {
+           // 1) Retrieve payment record from database
+           Optional<AppointmentPayment> paymentOpt = appointmentPaymentRepo.findBySessionId(sessionId);
+           if (paymentOpt.isEmpty()) {
+               logger.warn("Payment record not found for sessionId: {}", sessionId);
+               return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                       .body(Map.of("error", "Payment record not found"));
+           }
+           
+           AppointmentPayment payment = paymentOpt.get();
+           
+           // 2) Check if already processed
+           if (payment.getStatus() == PaymentStatus.PAID && payment.getAppointment() != null) {
+               logger.info("Payment already processed - SessionId: {}", sessionId);
+               return ResponseEntity.ok(Map.of(
+                       "status", "ALREADY_PROCESSED",
+                       "message", "Appointment already booked",
+                       "appointmentId", payment.getAppointment().getId()
+               ));
+           }
+           
+           // 3) Verify payment status with Stripe
+           Stripe.apiKey = "REMOVEDYOUR_SECRET_KEY_HERE"; // Use environment variable
+           Session session = Session.retrieve(sessionId);
+           
+           String paymentStatus = session.getPaymentStatus();
+           logger.info("Stripe payment status - SessionId: {}, Status: {}", sessionId, paymentStatus);
+           
+           // 4) Update payment status and book appointment if paid
+           if ("paid".equals(paymentStatus)) {
+               payment.setStatus(PaymentStatus.PAID);
+               
+               // Book appointment automatically
+               Appointment appointment = appointmentService.bookAppointment(
+                       payment.getUserId(),
+                       payment.getPetId(),
+                       payment.getDoctorId(),
+                       payment.getDoctorDayId(),
+                       payment.getSlotId(),
+                       LocalDate.parse(payment.getAppointmentDate())
+               );
+               
+               payment.setAppointment(appointment);
+               appointmentPaymentRepo.save(payment);
+               
+               logger.info("Appointment booked successfully - SessionId: {}, AppointmentId: {}", 
+                       sessionId, appointment.getId());
+               
+               return ResponseEntity.ok(Map.of(
+                       "status", "SUCCESS",
+                       "message", "Payment successful! Appointment booked.",
+                       "paymentStatus", PaymentStatus.PAID,
+                       "appointmentId", appointment.getId(),
+                       "appointmentDate", appointment.getAppointmentDate().toString(),
+                       "amount", payment.getAmount()
+               ));
+               
+           } else if ("unpaid".equals(paymentStatus)) {
+               payment.setStatus(PaymentStatus.FAILED);
+               appointmentPaymentRepo.save(payment);
+               
+               logger.warn("Payment failed - SessionId: {}", sessionId);
+               
+               return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                       .body(Map.of(
+                               "status", "FAILED",
+                               "message", "Payment was not completed",
+                               "paymentStatus", PaymentStatus.FAILED
+                       ));
+           } else {
+               payment.setStatus(PaymentStatus.PENDING);
+               appointmentPaymentRepo.save(payment);
+               
+               return ResponseEntity.ok(Map.of(
+                       "status", "PENDING",
+                       "message", "Payment is still processing",
+                       "paymentStatus", PaymentStatus.PENDING
+               ));
+           }
+           
+       } catch (StripeException ex) {
+           logger.error("Stripe verification error: {}", ex.getMessage(), ex);
+           return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .body(Map.of("error", "Payment verification failed: " + ex.getMessage()));
+                   
+       } catch (RuntimeException ex) {
+           logger.error("Runtime error during payment verification: {}", ex.getMessage(), ex);
+           return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                   .body(Map.of("error", ex.getMessage()));
+                   
+       } catch (Exception ex) {
+           logger.error("Unexpected error during payment verification", ex);
+           return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .body(Map.of("error", "Unexpected error: " + ex.getMessage()));
+       }
+   }
+   
+    
+    
+    
+    
+   
+
+     
 
     /**
      * ✅ OFFLINE APPOINTMENT BOOKING
