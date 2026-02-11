@@ -71,4 +71,6 @@ public interface WalkerKycRepo extends JpaRepository<WalkerKyc, Long> {
         @Param("serviceArea") String serviceArea,
         Pageable pageable
     );
+    
+	Optional<WalkerKyc> findByServiceProviderUid(UUID uid);
 }

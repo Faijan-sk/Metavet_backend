@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.demo.Dto.ServiceProviderRequestDto;
@@ -71,6 +72,20 @@ public ApiResponse<?> createService(ServiceProviderRequestDto dto) {
 	        return ApiResponse.serverError("❌ Unexpected server error occurred, please try again");
 	    }
 	}
+	
+	
+	
+	@GetMapping("/status")
+	public ResponseEntity<ApiResponse<?>> getServiceProviderStatus() {
+
+	    ApiResponse<?> response = serviceProviderService.getServiceProviderStatus();
+
+	    return ResponseEntity
+	            .status(response.getStatusCode() != null ? response.getStatusCode() : 200)
+	            .body(response);
+	}
+
+
 	
 	
 

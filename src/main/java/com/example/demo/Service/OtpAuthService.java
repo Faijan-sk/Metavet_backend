@@ -4,13 +4,16 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.Entities.DoctorsEntity;
 import com.example.demo.Entities.ServiceProvider;
 import com.example.demo.Entities.UsersEntity;
+import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Repository.ServiceProviderRepo;
 import com.example.demo.Repository.UserRepo;
 
@@ -28,6 +31,9 @@ public class OtpAuthService {
     
     @Autowired
     private PasswordEncoder passwordEncoder;  // ✅ Added for OTP verification
+    
+    @Autowired
+    private DoctorRepo doctorRepository;
 
     /**
      * Verify OTP using the temporary Base64 token (format: phoneNumber:timestamp)
@@ -107,7 +113,9 @@ public class OtpAuthService {
                 return response;
             }
             UsersEntity user = optionalUser.get();
-
+            
+           
+            
             // 7. Verify stored OTP exists
             if (user.getOtp() == null || user.getOtp().trim().isEmpty()) {
                 response.put("status", "failed");
@@ -150,7 +158,48 @@ public class OtpAuthService {
             userData.put("userType", authenticatedUser.getUserType());
             userData.put("userId", authenticatedUser.getUid());
             userData.put("id", authenticatedUser.getId());
-            userData.put("isProfileCompleted", authenticatedUser.isProfileCompleted());
+            userData.put("isProfileCompleted", false);
+            
+//            if(user.getUserType() == 2) {
+//            	
+//            	UUID userUid = user.getUid();
+//            
+//            	Optional<DoctorsEntity> doctorOpt = doctorRepository.findByUser( user);
+//            	
+//            if(doctorOpt.isPresent()) {
+//            	DoctorsEntity doctor  = doctorOpt.get();
+//            	System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" + doctor.getUid());
+//            	
+//            userData.put("isProfileCompleted",true);
+//           
+//            }else {
+//            	userData.put("isProfileCompleted",false);
+//            }
+//            }
+            
+            if (authenticatedUser.getUserType() != null && authenticatedUser.getUserType() == 2) {
+
+                Optional<DoctorsEntity> doctorOpt = doctorRepository.findByUser(authenticatedUser);
+
+                if (doctorOpt.isPresent()) {
+                    DoctorsEntity doctor = doctorOpt.get();
+                    System.out.println("Doctor UID: " + doctor.getUid());
+
+                    userData.put("isProfileCompleted", true);
+                }
+            }
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
             
             // 11. If Service Provider, fetch and add service type
             if(authenticatedUser.getUserType() == 3) {

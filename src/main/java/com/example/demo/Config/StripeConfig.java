@@ -9,6 +9,10 @@ public class StripeConfig {
  
     @PostConstruct
     public void init() {
-        Stripe.apiKey = "REMOVED51REaGAAciZnsrOJJdkbymXf4RJazqpr39biTeNLzxqPU4dLBtvlIpEWjbausNQ5arNn9DckFLZcE0UuoR5dETAL600XbkOPGoq";
+    	
+        Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfc0CKNl8J1wH7DediKy9B571eiu3pZxZlJxj6lTU75DHbrFhzIOv0rHJePUH0IRJuCvykYwFhC00VFngZgdk";
+        
     }
+    
 }
+

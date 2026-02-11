@@ -1,5 +1,8 @@
 package com.example.demo.Entities;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -42,6 +45,8 @@ public class AppointmentPayment extends BaseEntity {
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
 
+  
+    
     // Getters and Setters
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }

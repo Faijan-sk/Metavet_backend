@@ -32,6 +32,8 @@ public interface GroomerKycRepo extends JpaRepository<GroomerKyc, Long> {
     boolean existsByEmail(String email);
 
     List<GroomerKyc> findByStatus(ApplicationStatus status);
+    
+    Optional<GroomerKyc> findByServiceProviderUid(UUID uid);
 
     List<GroomerKyc> findByServiceLocationType(ServiceLocationType serviceLocationType);
 

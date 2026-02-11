@@ -75,4 +75,5 @@ public interface BehaviouristKycRepo extends JpaRepository<BehaviouristKyc, Long
         @Param("serviceType") String serviceType,
         Pageable pageable
     );
+	Optional<BehaviouristKyc> findByServiceProviderUid(UUID uid);
 }

@@ -90,35 +90,7 @@ public class DoctorController {
         }
     }
     
-//    @PostMapping("/create")
-//    public ResponseEntity<Map<String, Object>> createDoctor(@Valid @RequestBody DoctorRequestDto requestDto) {
-//        Map<String, Object> response = new HashMap();
-//        
-//        try {
-//            DoctorsEntity createdDoctor = doctorService.createDoctor(requestDto);
-//            
-//            response.put("success", true);
-//            response.put("message", "Doctor profile created successfully");
-//            response.put("data", createdDoctor);
-//            response.put("doctorId", createdDoctor.getDoctorId());
-//            
-//            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-//            
-//        } catch (RuntimeException e) {
-//            response.put("success", false);
-//            response.put("message", e.getMessage());
-//            response.put("data", null);
-//            
-//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-//            
-//        } catch (Exception e) {
-//            response.put("success", false);
-//            response.put("message", "An error occurred while creating doctor profile");
-//            response.put("error", e.getMessage());
-//            
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-//        }
-//    }
+
     
     
 

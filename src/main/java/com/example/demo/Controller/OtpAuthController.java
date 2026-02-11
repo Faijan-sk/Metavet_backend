@@ -68,7 +68,9 @@ public class OtpAuthController {
                 response.put("data", verificationResult.get("userData"));
                 response.put("accessToken", verificationResult.get("accessToken"));
                 response.put("refreshToken", verificationResult.get("refreshToken"));
-
+               
+                
+                
                 System.out.println("✅ OTP verification successful");
                 return ResponseEntity.ok(response);
             } else {

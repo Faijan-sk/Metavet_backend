@@ -1,39 +1,27 @@
 package com.example.demo.Dto;
 
 import java.time.LocalTime;
-import java.util.UUID;
-
 import com.example.demo.Enum.DayOfWeek;
 
-public class ServiceProviderDaysResponseDto {
-
-    private Long serviceProviderDayId;
-    private UUID serviceProviderDayUid;
+public class BehaviouristDayRequest {
+    
     private DayOfWeek dayOfWeek;
     private LocalTime startTime;
     private LocalTime endTime;
     private Integer slotDurationMinutes;
 
     // Constructors
-    public ServiceProviderDaysResponseDto() {}
+    public BehaviouristDayRequest() {}
+
+    public BehaviouristDayRequest(DayOfWeek dayOfWeek, LocalTime startTime, 
+                                   LocalTime endTime, Integer slotDurationMinutes) {
+        this.dayOfWeek = dayOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.slotDurationMinutes = slotDurationMinutes;
+    }
 
     // Getters and Setters
-    public Long getServiceProviderDayId() {
-        return serviceProviderDayId;
-    }
-
-    public void setServiceProviderDayId(Long serviceProviderDayId) {
-        this.serviceProviderDayId = serviceProviderDayId;
-    }
-
-    public UUID getServiceProviderDayUid() {
-        return serviceProviderDayUid;
-    }
-
-    public void setServiceProviderDayUid(UUID serviceProviderDayUid) {
-        this.serviceProviderDayUid = serviceProviderDayUid;
-    }
-
     public DayOfWeek getDayOfWeek() {
         return dayOfWeek;
     }

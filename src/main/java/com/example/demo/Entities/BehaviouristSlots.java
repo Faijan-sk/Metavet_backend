@@ -6,19 +6,24 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "service_provider_slots")
-public class ServiceProviderSlots extends BaseEntity {
+@Table(name = "behaviourist_slots")
+public class BehaviouristSlots extends BaseEntity {
 
     @Column(name = "service_provider_uid", nullable = false)
     private UUID serviceProviderUid; // Stores ServiceProvider's UID
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_provider_day_uid", referencedColumnName = "uid", nullable = false)
+    @JoinColumn(name = "behaviourist_day_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "slots", "serviceProvider"})
-    private ServiceProviderDays serviceProviderDay;
+    private BehaviouristAvailableDay serviceProviderDay;
 
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
@@ -32,29 +37,39 @@ public class ServiceProviderSlots extends BaseEntity {
         return this.getId();
     }
 
-    @JsonProperty("serviceProviderDayId")
-    public Long getServiceProviderDayIdForJson() {
+    @JsonProperty("behaviouristDayId")
+    public Long getBehaviouristDayIdForJson() {
         return serviceProviderDay != null ? serviceProviderDay.getId() : null;
     }
 
     // Constructors
-    public ServiceProviderSlots() {}
+    public BehaviouristSlots() {}
 
-    public ServiceProviderSlots(ServiceProviderDays serviceProviderDay, LocalTime startTime, LocalTime endTime) {
+    public BehaviouristSlots(BehaviouristAvailableDay serviceProviderDay, LocalTime startTime, LocalTime endTime) {
         this.serviceProviderDay = serviceProviderDay;
         this.serviceProviderUid = serviceProviderDay != null && serviceProviderDay.getServiceProvider() != null 
-                ? serviceProviderDay.getServiceProvider().getUid() : null;
+            ? serviceProviderDay.getServiceProvider().getUid() 
+            : null;
         this.startTime = startTime;
         this.endTime = endTime;
     }
 
     // Getters and Setters
-    public ServiceProviderDays getServiceProviderDay() {
+    public UUID getServiceProviderUid() {
+        return serviceProviderUid;
+    }
+
+    public void setServiceProviderUid(UUID serviceProviderUid) {
+        this.serviceProviderUid = serviceProviderUid;
+    }
+
+    public BehaviouristAvailableDay getServiceProviderDay() {
         return serviceProviderDay;
     }
 
-    public void setServiceProviderDay(ServiceProviderDays serviceProviderDay) {
+    public void setServiceProviderDay(BehaviouristAvailableDay serviceProviderDay) {
         this.serviceProviderDay = serviceProviderDay;
+        // Keep serviceProviderUid in sync
         if (serviceProviderDay != null && serviceProviderDay.getServiceProvider() != null) {
             this.serviceProviderUid = serviceProviderDay.getServiceProvider().getUid();
         }
@@ -74,13 +89,5 @@ public class ServiceProviderSlots extends BaseEntity {
 
     public void setEndTime(LocalTime endTime) {
         this.endTime = endTime;
-    }
-
-    public UUID getServiceProviderUid() {
-        return serviceProviderUid;
-    }
-
-    public void setServiceProviderUid(UUID serviceProviderUid) {
-        this.serviceProviderUid = serviceProviderUid;
     }
 }

@@ -10,6 +10,7 @@ import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.example.demo.Entities.AppointmentPayment;
 import com.example.demo.Entities.AppointmentPayment.PaymentStatus;
+import com.example.demo.Dto.AppointmentRequest;
 import com.example.demo.Dto.DoctorDaysResponseDto;
 import com.example.demo.Dto.SlotResponseDto;
 import com.example.demo.Entities.Appointment;
@@ -53,6 +54,7 @@ public class AppointmentController {
     @Autowired
     private DoctorRepo doctorRepository;
 
+    
     @Autowired
     private SpringSecurityAuditorAware auditorAware;
     
@@ -66,12 +68,18 @@ public class AppointmentController {
     @GetMapping("/doctors/by-day/{day}")
     public ResponseEntity<?> getDoctorsByDay(@PathVariable DayOfWeek day) {
         try {
+        	
             List<DoctorsEntity> doctors = appointmentService.getDoctorsByDay(day);
+            
             return ResponseEntity.ok(doctors);
+            
         } catch (RuntimeException ex) {
+        	
             logger.warn("getDoctorsByDay error: {}", ex.getMessage());
+            
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", ex.getMessage()));
+            
         }
     }
 
@@ -114,6 +122,7 @@ public class AppointmentController {
      */
    @PostMapping("/book")
 public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> request) {
+	   
     try {
         // 1) Get current logged-in user from auditorAware
         Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
@@ -192,13 +201,15 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
         // 7) ✅ CREATE STRIPE CHECKOUT SESSION
         long amountInCents = (long) (consultationFee * 100);
         
-        Stripe.apiKey = "REMOVED51REaGAAciZnsrOJJdkbymXf4RJazqpr39biTeNLzxqPU4dLBtvlIpEWjbausNQ5arNn9DckFLZcE0UuoR5dETAL600XbkOPGoq"; // Use environment variable in production
-        
+//        Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfc0CKNl8J1wH7DediKy9B571eiu3pZxZlJxj6lTU75DHbrFhzIOv0rHJePUH0IRJuCvykYwFhC00VFngZgdk"; // Use environment variable in production
+        Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfcSLkEy2tRLS6dcTPuchVC5cnqQRN4yvTXjrc37MHmxX3nY7Dtwjp5jZX6C8oZy0kv9LTU90UY00PsHRPCun";
         SessionCreateParams params = SessionCreateParams.builder()
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl("http://localhost:8080/payment-sucess?session_id={CHECKOUT_SESSION_ID}")
-                .setCancelUrl("http://localhost:8080/payment-failed?session_id={CHECKOUT_SESSION_ID}")
+                .setSuccessUrl("http://localhost:5173/payment-sucess?session_id={CHECKOUT_SESSION_ID}")
+                
+                .setCancelUrl("http://localhost:5173/payment-failed?session_id={CHECKOUT_SESSION_ID}")
+//                .setCancelUrl("http://localhost:5173/xyz?session_id={CHECKOUT_SESSION_ID}")
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
                                 .setPriceData(
@@ -207,7 +218,7 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
                                                 .setUnitAmount(amountInCents)
                                                 .setProductData(
                                                         SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                                .setName("Appointment with Dr. " + doctor.getUser().getFirstName() + doctor.getUser().getLastName())
+                                                                .setName("Appointment with Dr. " + doctor.getUser().getFirstName()+ " " + doctor.getUser().getLastName())
                                                                 .setDescription("Date: " + appointmentDate.toString() + 
                                                                               " | Consultation Fee: $" + consultationFee)
                                                                 .build()
@@ -306,7 +317,8 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
            }
            
            // 3) Verify payment status with Stripe
-           Stripe.apiKey = "REMOVEDYOUR_SECRET_KEY_HERE"; // Use environment variable
+//           Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfc0CKNl8J1wH7DediKy9B571eiu3pZxZlJxj6lTU75DHbrFhzIOv0rHJePUH0IRJuCvykYwFhC00VFngZgdk"; 
+           Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfcSLkEy2tRLS6dcTPuchVC5cnqQRN4yvTXjrc37MHmxX3nY7Dtwjp5jZX6C8oZy0kv9LTU90UY00PsHRPCun";
            Session session = Session.retrieve(sessionId);
            
            String paymentStatus = session.getPaymentStatus();
@@ -318,7 +330,7 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
                
                // Book appointment automatically
                Appointment appointment = appointmentService.bookAppointment(
-                       payment.getUserId(),
+                       payment.getUserId(),	
                        payment.getPetId(),
                        payment.getDoctorId(),
                        payment.getDoctorDayId(),
@@ -327,6 +339,7 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
                );
                
                payment.setAppointment(appointment);
+               
                appointmentPaymentRepo.save(payment);
                
                logger.info("Appointment booked successfully - SessionId: {}, AppointmentId: {}", 
@@ -356,7 +369,6 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
            } else {
                payment.setStatus(PaymentStatus.PENDING);
                appointmentPaymentRepo.save(payment);
-               
                return ResponseEntity.ok(Map.of(
                        "status", "PENDING",
                        "message", "Payment is still processing",
@@ -520,8 +532,9 @@ public ResponseEntity<?> bookOfflineAppointmentSimple(
         public void setUserId(Long userId) { this.userId = userId; }
         
         public Long getDoctorId() { return doctorId; }
-        public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
         
+        public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
+       
         public Long getDoctorDayId() { return doctorDayId; }
         public void setDoctorDayId(Long doctorDayId) { this.doctorDayId = doctorDayId; }
         
@@ -1041,6 +1054,53 @@ public ResponseEntity<?> bookOfflineAppointmentSimple(
         
     
  
+    @PostMapping("/dummy-book")
+public ResponseEntity<?> bookOppointmentDummy(@RequestBody Map<String, Object> request) {
+
+    try {
+        // Logged-in user nikalo
+        Optional<UsersEntity> currentUserOpt = auditorAware.getCurrentAuditor();
+        if (currentUserOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "User not authenticated"));
+        }
+
+        UsersEntity loginedUser = currentUserOpt.get();
+        long userId = loginedUser.getId();   // <-- UUID
+
+        // Request parsing
+        Long petId = (request.get("petId") != null)
+                ? Long.parseLong(request.get("petId").toString())
+                : null;
+
+        Long doctorId = Long.parseLong(request.get("doctorId").toString());
+        Long doctorDayId = Long.parseLong(request.get("doctorDayId").toString());
+        Long slotId = Long.parseLong(request.get("slotId").toString());
+        LocalDate appointmentDate = LocalDate.parse(request.get("appointmentDate").toString());
+
+        // Service call (Service method ka signature: bookAppointment(UUID userId, ...))
+        Appointment appointment = appointmentService.bookAppointment(
+                userId,
+                petId,
+                doctorId,
+                doctorDayId,
+                slotId,
+                appointmentDate
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Appointment booked successfully",
+                "appointment", appointment
+        ));
+
+    } catch (RuntimeException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Something went wrong"));
+    }
+}
+
     
     
     

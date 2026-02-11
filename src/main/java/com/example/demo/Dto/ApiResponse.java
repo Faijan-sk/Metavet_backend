@@ -152,4 +152,19 @@ public class ApiResponse<T> {
                 ", errors=" + errors +
                 '}';
     }
+    
+    public static ApiResponse<Void> statusResponse(
+            boolean success,
+            String message,
+            String status,
+            Integer statusCode
+    ) {
+        ApiResponse<Void> response = new ApiResponse<>();
+        response.setSuccess(success);
+        response.setMessage(message);
+        response.setStatus(status);
+        response.setStatusCode(statusCode);
+        return response;
+    }
+
 }

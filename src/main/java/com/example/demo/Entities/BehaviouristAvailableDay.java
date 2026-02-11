@@ -9,11 +9,20 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "service_provider_days_availability")
-public class ServiceProviderDays extends BaseEntity {
+@Table(name = "behaviourist_available_days")
+public class BehaviouristAvailableDay extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "day_of_week", nullable = false, length = 20)
@@ -35,11 +44,11 @@ public class ServiceProviderDays extends BaseEntity {
 
     @OneToMany(mappedBy = "serviceProviderDay", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
-    private List<ServiceProviderSlots> slots;
+    private List<BehaviouristSlots> slots;
 
-    // Custom getter for JSON response
-    @JsonProperty("serviceProviderDayId")
-    public Long getServiceProviderDayIdForJson() {
+    // Custom getters for JSON response
+    @JsonProperty("behaviouristDayId")
+    public Long getBehaviouristDayIdForJson() {
         return this.getId();
     }
 
@@ -49,10 +58,10 @@ public class ServiceProviderDays extends BaseEntity {
     }
 
     // Constructors
-    public ServiceProviderDays() {}
+    public BehaviouristAvailableDay() {}
 
-    public ServiceProviderDays(DayOfWeek dayOfWeek, ServiceProvider serviceProvider, 
-                               LocalTime startTime, LocalTime endTime, Integer slotDurationMinutes) {
+    public BehaviouristAvailableDay(DayOfWeek dayOfWeek, ServiceProvider serviceProvider, 
+                                     LocalTime startTime, LocalTime endTime, Integer slotDurationMinutes) {
         this.dayOfWeek = dayOfWeek;
         this.serviceProvider = serviceProvider;
         this.startTime = startTime;
@@ -101,11 +110,11 @@ public class ServiceProviderDays extends BaseEntity {
         this.slotDurationMinutes = slotDurationMinutes;
     }
 
-    public List<ServiceProviderSlots> getSlots() {
+    public List<BehaviouristSlots> getSlots() {
         return slots;
     }
 
-    public void setSlots(List<ServiceProviderSlots> slots) {
+    public void setSlots(List<BehaviouristSlots> slots) {
         this.slots = slots;
     }
 }
