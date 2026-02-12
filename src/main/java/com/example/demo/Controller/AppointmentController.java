@@ -24,6 +24,7 @@ import com.example.demo.Repository.AppointmentPaymentRepo;
 import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Service.AppointmentService;
 import com.example.demo.Service.DoctorService;
+import com.google.api.client.util.Value;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,11 @@ public class AppointmentController {
     @Autowired
     private AppointmentPaymentRepo appointmentPaymentRepo;
 
+    
+    @Value("${stripe.secret.key}")
+    private String stripeSecretKey;
+    
+    
     /**
      * ✅ API 1: Get all doctors available on a specific day
      * GET /api/appointments/doctors/by-day/{day}
@@ -200,16 +206,14 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
 
         // 7) ✅ CREATE STRIPE CHECKOUT SESSION
         long amountInCents = (long) (consultationFee * 100);
-        
-//        Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfc0CKNl8J1wH7DediKy9B571eiu3pZxZlJxj6lTU75DHbrFhzIOv0rHJePUH0IRJuCvykYwFhC00VFngZgdk"; // Use environment variable in production
-        Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfcSLkEy2tRLS6dcTPuchVC5cnqQRN4yvTXjrc37MHmxX3nY7Dtwjp5jZX6C8oZy0kv9LTU90UY00PsHRPCun";
+
+        Stripe.apiKey = stripeSecretKey ;
         SessionCreateParams params = SessionCreateParams.builder()
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl("http://localhost:5173/payment-sucess?session_id={CHECKOUT_SESSION_ID}")
                 
                 .setCancelUrl("http://localhost:5173/payment-failed?session_id={CHECKOUT_SESSION_ID}")
-//                .setCancelUrl("http://localhost:5173/xyz?session_id={CHECKOUT_SESSION_ID}")
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
                                 .setPriceData(
@@ -317,8 +321,8 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
            }
            
            // 3) Verify payment status with Stripe
-//           Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfc0CKNl8J1wH7DediKy9B571eiu3pZxZlJxj6lTU75DHbrFhzIOv0rHJePUH0IRJuCvykYwFhC00VFngZgdk"; 
-           Stripe.apiKey = "REMOVED51R72gCEZRh4nTXfcSLkEy2tRLS6dcTPuchVC5cnqQRN4yvTXjrc37MHmxX3nY7Dtwjp5jZX6C8oZy0kv9LTU90UY00PsHRPCun";
+
+           Stripe.apiKey = stripeSecretKey;
            Session session = Session.retrieve(sessionId);
            
            String paymentStatus = session.getPaymentStatus();
