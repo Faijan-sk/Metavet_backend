@@ -21,8 +21,9 @@ import java.time.LocalDate;
 @Service
 public class PaymentService {
 
-    @Value("${stripe.api.key}")
-    private String stripeSecretKey;
+	 @Autowired
+	 private SecretKeyService secrateKeyService;
+	    
 
     @Value("${stripe.success.url}")
     private String successUrl;
@@ -52,7 +53,7 @@ public class PaymentService {
     ) throws StripeException {
         
         // Set Stripe API key
-        Stripe.apiKey = stripeSecretKey;
+        Stripe.apiKey =  secrateKeyService.getValueByKeyName("STRIPE_SECRET_KEY_TEST");
 
         // Get doctor details and consultation fee
         DoctorsEntity doctor = doctorRepo.findById(doctorId)
@@ -112,7 +113,7 @@ public class PaymentService {
     @Transactional
     public AppointmentPayment verifyPaymentAndBookAppointment(String sessionId) throws StripeException {
         
-        Stripe.apiKey = stripeSecretKey;
+        Stripe.apiKey = secrateKeyService.getValueByKeyName("STRIPE_SECRET_KEY_TEST");
 
         // Retrieve payment from database
         AppointmentPayment payment = paymentRepo.findBySessionId(sessionId)

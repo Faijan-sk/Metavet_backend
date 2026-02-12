@@ -24,6 +24,7 @@ import com.example.demo.Repository.AppointmentPaymentRepo;
 import com.example.demo.Repository.DoctorRepo;
 import com.example.demo.Service.AppointmentService;
 import com.example.demo.Service.DoctorService;
+import com.example.demo.Service.SecretKeyService;
 import com.google.api.client.util.Value;
 
 import org.slf4j.Logger;
@@ -63,8 +64,9 @@ public class AppointmentController {
     private AppointmentPaymentRepo appointmentPaymentRepo;
 
     
-    @Value("${stripe.secret.key}")
-    private String stripeSecretKey;
+
+    @Autowired
+    private SecretKeyService secrateKeyService;
     
     
     /**
@@ -207,7 +209,7 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
         // 7) ✅ CREATE STRIPE CHECKOUT SESSION
         long amountInCents = (long) (consultationFee * 100);
 
-        Stripe.apiKey = stripeSecretKey ;
+        Stripe.apiKey = secrateKeyService.getValueByKeyName("STRIPE_SECRET_KEY_TEST") ;
         SessionCreateParams params = SessionCreateParams.builder()
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .setMode(SessionCreateParams.Mode.PAYMENT)
@@ -322,7 +324,7 @@ public ResponseEntity<?> bookAppointment(@RequestBody Map<String, Object> reques
            
            // 3) Verify payment status with Stripe
 
-           Stripe.apiKey = stripeSecretKey;
+           Stripe.apiKey =  secrateKeyService.getValueByKeyName("STRIPE_SECRET_KEY_TEST");
            Session session = Session.retrieve(sessionId);
            
            String paymentStatus = session.getPaymentStatus();
