@@ -18,6 +18,11 @@ public interface ServiceProviderRepo extends JpaRepository<ServiceProvider, Long
 	// Add these methods to ServiceProviderRepo
 	Optional<ServiceProvider> findByUid(UUID uid);
 	boolean existsByUid(UUID uid);
+	
 	Optional<ServiceProvider> findByOwner_Uid(UUID ownerUid);
 
+	
+	
+    
+    
 }
